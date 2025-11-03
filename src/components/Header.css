@@ -1,0 +1,254 @@
+/* src/components/Header.css */
+.header {
+    background: var(--bg-header);
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-primary);
+}
+
+.header-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 15px 10px;
+}
+
+.page-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.header-actions {
+    display: flex;
+    gap: 30px;
+    position: relative;
+    padding-right: 20px;
+}
+
+.icon-btn {
+    background: transparent;
+    border: 2px solid var(--accent-secondary);
+    color: var(--text-primary);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: background 0.2s, transform 0.1s;
+    position: relative;
+    z-index: 10;
+}
+
+.icon-btn:hover {
+    background: var(--accent-secondary);
+    transform: scale(1.1);
+}
+
+/* Стили для выпадающего меню уведомлений */
+.notification-dropdown {
+    position: relative;
+}
+
+.notification-menu {
+    position: absolute;
+    top: 110%;
+    right: 0;
+    width: min(500px, calc(100vw - 20px));
+    max-width: 500px;
+    background: var(--bg-sidebar);
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 100;
+    padding: 10px 0;
+    display: flex;
+    flex-direction: column;
+    /* Добавим, чтобы меню не вылезало за экран */
+    overflow: hidden;
+}
+
+.notification-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--border-primary);
+}
+
+.notification-header h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.notification-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* Уведомление теперь делится на 2 части */
+.notification-item {
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--border-primary);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* Центрируем по вертикали */
+    gap: 10px;
+}
+
+.notification-item.read {
+    opacity: 0.6;
+}
+
+.notification-item.read p {
+    text-decoration: line-through;
+    color: var(--text-secondary);
+}
+
+/* Левая часть — контент уведомления */
+.notification-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0; /* Позволяет сжиматься, если много текста */
+}
+
+.notification-item p {
+    margin: 0 0 4px 0;
+    font-size: 0.9rem;
+    word-break: break-word; /* Перенос длинных слов */
+}
+
+.notification-time {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+/* Правая часть — кнопка с галочкой */
+.read-button {
+    background: transparent;
+    border: 1px solid var(--accent-secondary); /* Заменили на accent-secondary */
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0; /* Не сжимается */
+    transition: all 0.2s;
+    color: transparent; /* Иконка скрыта, пока не прочитано */
+}
+
+.read-button:hover {
+    background: var(--accent-secondary); /* Заменили на accent-secondary */
+    color: white;
+}
+
+.read-button.read {
+    background: var(--accent-secondary); /* Заменили на accent-secondary */
+    color: white;
+}
+
+.read-button svg {
+    width: 12px;
+    height: 12px;
+}
+
+.header-secondary {
+    padding: 10px 0 10px 10px;
+    border-top: 3px solid var(--accent-secondary);
+    min-height: 40px;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.header-secondary.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.filter-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* Стилизация select */
+.filter-group select {
+    padding: 8px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border-primary);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    appearance: none;
+    position: relative;
+    cursor: pointer;
+    min-width: 60px;
+}
+
+/* Стрелка select */
+.filter-group select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23a0aec0' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 12px;
+    padding-right: 28px;
+}
+
+/* Стили для option (внутри выпадающего списка) */
+.filter-group select option {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+/* Стили при фокусе */
+.filter-group select:focus {
+    outline: none;
+    border-color: var(--accent-secondary);
+}
+
+/* Стилизация input */
+.filter-group input {
+    padding: 8px 10px; /* Сделали такой же padding, как у select */
+    border-radius: 4px;
+    border: 1px solid var(--border-primary);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    min-width: 80px; /* Минимальная ширина для согласованности */
+}
+
+.filter-group input:focus {
+    outline: none;
+    border-color: var(--accent-secondary);
+}
+
+.stats span {
+    margin-right: 15px;
+    font-size: 0.9rem;
+    background: var(--bg-secondary);
+    padding: 8px 10px;
+    border-radius: 4px;
+}
