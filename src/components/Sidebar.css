@@ -1,0 +1,66 @@
+/* src/components/Sidebar.css */
+.sidebar {
+    width: auto;
+    background: var(--bg-sidebar);
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    border-right: 3px solid var(--accent-secondary);
+    min-width: 80px;
+}
+
+.sidebar .logo {
+    padding: 10px 0 0 0;
+    height: 70px;
+    width: auto;
+    padding-top: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    font-size: 1.2rem;
+    color: var(--text-primary);
+    text-align: center;
+    line-height: 1;
+}
+
+.menu-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px;
+    text-decoration: none;
+    color: var(--text-secondary);
+    width: 100%;
+    text-align: center;
+    transition: background 0.2s ease;
+    border-radius: 6px;
+    box-sizing: border-box;
+    margin: 4px 0;
+}
+
+.menu-item.active {
+    background: var(--active-bg);
+    color: var(--text-primary);
+}
+
+.menu-item:hover {
+    background: var(--hover-bg);
+    color: var(--text-primary);
+}
+
+.menu-item .icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 6px;
+
+}
+
+.menu-item .label {
+    font-size: 0.8rem;
+}
