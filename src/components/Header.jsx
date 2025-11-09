@@ -1,8 +1,11 @@
 // src/components/Header.jsx
 import React, { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+
 import BellIcon from './icons/header/BellIcon';
 import ProfileIcon from './icons/header/ProfileIcon';
+
 import CheckIcon from './icons/header/CheckIcon';
 import './Header.css';
 
@@ -15,10 +18,13 @@ const initialNotifications = [
 
 const Header = () => {
     const location = useLocation();
+    const navigate = useNavigate();
+    const { user } = useAuth();
     const isMapPage = location.pathname === '/map';
 
     const [corpus, setCorpus] = useState('Б');
     const [floor, setFloor] = useState('2'); // Теперь тоже строка
+
     const [showNotifications, setShowNotifications] = useState(false);
     const [notifications, setNotifications] = useState(initialNotifications);
 
@@ -28,6 +34,14 @@ const Header = () => {
         setNotifications(notifications.map(not =>
             not.id === id ? { ...not, read: !not.read } : not
         ));
+    };
+
+    const goToProfileOrLogin = () => {
+        if (user) {
+            navigate('/profile');
+        } else {
+            navigate('/login');
+        }
     };
 
     return (
@@ -74,7 +88,7 @@ const Header = () => {
                         )}
                     </div>
 
-                    <button className="icon-btn">
+                    <button className="icon-btn" onClick={goToProfileOrLogin}>
                         <ProfileIcon />
                     </button>
                 </div>
