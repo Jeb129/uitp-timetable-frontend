@@ -11,6 +11,7 @@ import KGUPage from './pages/KGUPage';
 import ProfilePage from './pages/ProfilePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import RulesPage from './pages/RulesPage';
 
 // Компонент, который проверяет авторизацию
 const ProtectedRoute = ({ children }) => {
@@ -88,6 +89,11 @@ const AppContent = () => {
                         <RegisterPage />
                     </AppLayout>
                 </GuestRoute>
+            } />
+            <Route path="/rules" element={
+                <AppLayout>
+                    <RulesPage />
+                </AppLayout>
             } />
         </Routes>
     );

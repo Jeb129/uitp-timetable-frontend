@@ -1,0 +1,199 @@
+/* src/pages/RulesPage.css */
+.rules-page {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 20px 15px;
+    background: white;
+    box-sizing: border-box;
+}
+
+.rules-container {
+    width: 100%;
+    max-width: 700px; /* Еще уменьшили ширину */
+    display: flex;
+    justify-content: center;
+}
+
+.rules-modal {
+    width: 100%;
+    background: white;
+    border-radius: 10px;
+    box-shadow:
+            0 8px 20px rgba(0, 0, 0, 0.08),
+            0 3px 6px rgba(0, 0, 0, 0.04);
+    padding: 0;
+    overflow: hidden;
+    max-height: 75vh; /* Уменьшили высоту */
+    display: flex;
+    flex-direction: column;
+    border: 2px solid var(--accent-secondary);
+}
+
+.rules-header {
+    background: white;
+    padding: 15px 25px; /* Уменьшили высоту заголовка */
+    color: var(--text-inverted);
+    text-align: center;
+    border-bottom: 1px solid var(--accent-secondary);
+}
+
+.rules-title {
+    font-size: 1.3rem; /* Еще уменьшили размер заголовка */
+    margin: 0;
+    font-weight: 600;
+    color: var(--text-inverted);
+    line-height: 1.3; /* Уменьшили межстрочный интервал */
+}
+
+.rules-content {
+    padding: 25px;
+    overflow-y: auto;
+    flex: 1;
+    background: #f8fafc;
+}
+
+.rule-item {
+    margin-bottom: 20px;
+    padding: 18px;
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e2e8f0;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rule-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.rule-item:last-child {
+    margin-bottom: 0;
+}
+
+.rule-item h3 {
+    margin: 0 0 10px;
+    font-size: 1rem;
+    color: #1e293b;
+    font-weight: 600;
+    border-bottom: 2px solid var(--accent-secondary);
+    padding-bottom: 5px;
+}
+
+.rule-content {
+    font-size: 0.9rem;
+    line-height: 1.4;
+    color: #475569;
+}
+
+.rule-content p {
+    margin: 8px 0;
+}
+
+.rule-content ul {
+    margin: 10px 0;
+    padding-left: 18px;
+}
+
+.rule-content li {
+    margin-bottom: 5px;
+    position: relative;
+    padding-left: 5px;
+}
+
+.rule-content li::before {
+    content: "•";
+    color: var(--accent-secondary);
+    font-weight: bold;
+    position: absolute;
+    left: -8px;
+}
+
+.rule-content strong {
+    color: #1e293b;
+    font-weight: 600;
+}
+
+/* Стили для скроллбара */
+.rules-content::-webkit-scrollbar {
+    width: 5px;
+}
+
+.rules-content::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 2px;
+}
+
+.rules-content::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 2px;
+}
+
+.rules-content::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .rules-page {
+        padding: 15px 10px;
+    }
+
+    .rules-container {
+        max-width: 100%;
+    }
+
+    .rules-modal {
+        max-height: 80vh;
+        border-width: 1px;
+    }
+
+    .rules-header {
+        padding: 12px 15px;
+    }
+
+    .rules-title {
+        font-size: 1.1rem;
+    }
+
+    .rules-content {
+        padding: 20px;
+    }
+
+    .rule-item {
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+
+    .rule-item h3 {
+        font-size: 0.95rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .rules-page {
+        padding: 10px 8px;
+    }
+
+    .rules-header {
+        padding: 10px 12px;
+    }
+
+    .rules-title {
+        font-size: 1rem;
+    }
+
+    .rules-content {
+        padding: 15px;
+    }
+
+    .rule-item {
+        padding: 12px;
+    }
+
+    .rule-content {
+        font-size: 0.85rem;
+    }
+}

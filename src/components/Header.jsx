@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 import BellIcon from './icons/header/BellIcon';
 import ProfileIcon from './icons/header/ProfileIcon';
-
+import HelpIcon from './icons/header/HelpIcon';
 import CheckIcon from './icons/header/CheckIcon';
 import './Header.css';
 
@@ -43,6 +43,11 @@ const Header = () => {
             navigate('/login');
         }
     };
+
+    const goToRules = () => {
+        navigate('/rules');
+    };
+
 
     return (
         <header className="header">
@@ -118,6 +123,10 @@ const Header = () => {
 
                     <input type="text" placeholder="Укажите время" />
                     <input type="text" placeholder="Кол-во мест" />
+
+                    <button className="icon-btn" onClick={goToRules}>
+                        <HelpIcon />
+                    </button>
                 </div>
             </div>
         </header>
