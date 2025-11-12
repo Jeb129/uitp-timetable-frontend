@@ -1,63 +1,458 @@
-.auth-page {
+/* src/pages/ProfilePage.css */
+.profile-page {
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
     min-height: 100vh;
+    padding: 20px;
     background: var(--bg-primary);
 }
 
-.auth-form-container {
+.profile-container {
+    width: 100%;
+    max-width: 800px;
     background: var(--bg-sidebar);
-    padding: 30px;
     border-radius: 8px;
     border: 1px solid var(--border-primary);
-    width: 100%;
-    max-width: 400px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    max-height: 70vh; /* Уменьшили высоту окна */
 }
 
-.auth-form-container h2 {
-    margin: 0 0 20px;
-    text-align: center;
+.profile-header {
+    padding: 5px 30px; /* Уменьшили высоту заголовка */
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-primary);
 }
 
-.auth-form {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+.profile-header h2 {
+    margin: 0 0 5px; /* Уменьшили отступы */
+    color: var(--accent-secondary);
+    font-size: 1.2rem; /* Уменьшили размер шрифта заголовка */
 }
 
-.auth-input {
-    padding: 8px 12px;
-    border-radius: 4px;
-    border: 1px solid var(--border-primary);
-    background: var(--bg-secondary);
-    color: var(--text-primary);
+.profile-header p {
+    margin: 0;
+    color: var(--accent-secondary);
     font-size: 0.9rem;
 }
 
-.auth-input:focus {
-    outline: none;
-    border-color: var(--accent-primary);
+.profile-tabs {
+    display: flex;
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-primary);
 }
 
-.auth-button {
-    padding: 8px 12px;
-    border-radius: 4px;
+.tab-button {
+    flex: 1;
+    padding: 12px 20px; /* Уменьшили высоту кнопок вкладок */
     border: none;
-    background: var(--accent-primary);
-    color: white;
+    background: transparent;
+    color: var(--accent-secondary);
     font-size: 0.9rem;
     cursor: pointer;
+    transition: all 0.3s ease;
+    border-bottom: 2px solid transparent;
 }
 
-.auth-button:hover {
+.tab-button:hover {
+    background: var(--bg-primary-dark);
+    color: var(--accent-secondary);
+}
+
+.tab-button.active {
+    color: var(--text-primary);
+    border-bottom-color: var(--accent-secondary);
+    background: var(--bg-secondary);
+}
+
+.tab-content {
+    padding: 0;
+    max-height: calc(70vh - 120px); /* Учитываем высоту заголовка и вкладок */
+    overflow-y: auto;
+    background: var(--bg-secondary);
+}
+
+/* Стили для вкладки информации */
+.info-tab {
+    padding: 20px; /* Уменьшили отступы */
+}
+
+.user-info-card {
+    background: var(--text-primary);
+    border-radius: 6px;
+    padding: 20px; /* Уменьшили отступы */
+    border: 1px solid var(--border-primary);
+    margin-bottom: 20px;
+}
+
+.user-info-card h3 {
+    margin: 0 0 15px; /* Уменьшили отступы */
+    color: var(--accent-secondary);
+    font-size: 1.1rem; /* Уменьшили размер шрифта */
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px; /* Уменьшили промежутки */
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px; /* Уменьшили промежутки */
+}
+
+.info-item label {
+    font-weight: 600;
+    color: var(--accent-secondary);
+    font-size: 0.85rem; /* Уменьшили размер шрифта */
+}
+
+.info-item span {
+    color: var(--text-inverted);
+    font-size: 0.9rem; /* Уменьшили размер шрифта */
+}
+
+.profile-actions {
+    display: flex;
+    gap: 12px; /* Уменьшили промежутки */
+    justify-content: flex-start;
+}
+
+.edit-button, .logout-button, .book-room-button, .view-toggle-button {
+    padding: 8px 16px; /* Уменьшили кнопки */
+    border-radius: 4px;
+    border: none;
+    font-size: 0.85rem; /* Уменьшили размер шрифта */
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.edit-button {
+    background: var(--accent-secondary);
+    color: white;
+}
+
+.edit-button:hover {
     background: #0056b3;
 }
 
-.profile-page {
+.logout-button {
+    background: #dc3545;
+    color: white;
+}
+
+.logout-button:hover {
+    background: #c82333;
+}
+
+.book-room-button {
+    background: var(--accent-primary);
+    color: white;
+}
+
+.book-room-button:hover {
+    background: #0056b3;
+}
+
+.view-toggle-button {
+    background: var(--accent-secondary);
+    color: white;
+    font-size: 0.8rem;
+    padding: 6px 12px;
+}
+
+.view-toggle-button:hover {
+    background: #0056b3;
+}
+
+/* Стили для вкладки бронирований */
+.bookings-tab {
     padding: 20px;
-    max-width: 600px;
-    margin: 0 auto;
+}
+
+.bookings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.bookings-header h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 1.1rem;
+}
+
+.no-bookings {
+    text-align: center;
+    padding: 30px 20px;
     background: var(--bg-primary);
-    min-height: 100vh;
+    border-radius: 6px;
+    border: 1px solid var(--border-primary);
+}
+
+.no-bookings p {
+    margin: 0 0 15px;
+    color: var(--text-secondary);
+}
+
+.bookings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.booking-card {
+    background: var(--bg-primary);
+    border-radius: 6px;
+    padding: 15px;
+    border: 1px solid var(--border-primary);
+    transition: all 0.3s ease;
+}
+
+.booking-card:hover {
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+}
+
+.booking-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 6px;
+}
+
+.booking-header h4 {
+    margin: 0;
+    color: var(--accent-secondary);
+    font-size: 1rem;
+}
+
+.status-badge {
+    padding: 3px 10px;
+    border-radius: 15px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.status-confirmed {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-rejected {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.booking-details {
+    margin-bottom: 10px;
+}
+
+.booking-info {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 6px;
+}
+
+.booking-date, .booking-time {
+    color: var(--text-inverted);
+    font-weight: 500;
+    font-size: 0.8rem;
+}
+
+.booking-equipment {
+    color: var(--text-inverted);
+    font-size: 0.7rem;
+}
+
+.booking-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.action-button {
+    padding: 5px 10px;
+    border-radius: 3px;
+    border: none;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.action-button.view {
+    background: var(--accent-secondary);
+    color: white;
+}
+
+.action-button.cancel {
+    background: #6c757d;
+    color: white;
+}
+
+.action-button:hover {
+    opacity: 0.8;
+}
+
+/* Стили для таблицы */
+.bookings-table-container {
+    overflow-x: auto;
+    background: var(--bg-primary);
+    border-radius: 6px;
+    border: 1px solid var(--bg-primary-darkest  );
+}
+
+.bookings-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+
+.bookings-table th {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-weight: 600;
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-primary);
+    white-space: nowrap;
+}
+
+.bookings-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-primary);
+    color: var(--text-inverted);
+}
+
+.bookings-table tr:last-child td {
+    border-bottom: none;
+}
+
+.bookings-table tr:hover {
+    background: var(--bg-primary-dark);
+}
+
+.booking-id {
+    color: var(--accent-secondary);
+    font-weight: 600;
+}
+
+.booking-room {
+    font-weight: 500;
+    color: var(--accent-secondary);
+}
+
+.table-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.table-actions .action-button {
+    padding: 4px 8px;
+    font-size: 0.7rem;
+}
+
+/* Стили для скроллбара */
+.tab-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.tab-content::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+.tab-content::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 2px;
+}
+
+.tab-content::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .profile-page {
+        padding: 15px;
+    }
+
+    .profile-container {
+        max-height: 75vh;
+    }
+
+    .profile-header {
+        padding: 15px 20px;
+    }
+
+    .info-tab, .bookings-tab {
+        padding: 15px;
+    }
+
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-actions {
+        flex-direction: column;
+    }
+
+    .booking-header {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .booking-info {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .bookings-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .bookings-table {
+        font-size: 0.7rem;
+    }
+
+    .bookings-table th,
+    .bookings-table td {
+        padding: 8px 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .profile-page {
+        padding: 10px;
+    }
+
+    .profile-container {
+        max-height: 80vh;
+    }
+
+    .profile-header, .info-tab, .bookings-tab {
+        padding: 12px;
+    }
+
+    .tab-button {
+        padding: 10px 15px;
+        font-size: 0.85rem;
+    }
+
+    .bookings-table-container {
+        font-size: 0.7rem;
+    }
+
+    .table-actions {
+        flex-direction: column;
+        gap: 4px;
+    }
 }

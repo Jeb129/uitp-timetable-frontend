@@ -8,27 +8,25 @@ import MapPage from './pages/MapPage';
 import AuditoriumsPage from './pages/AuditoriumsPage';
 import SchedulePage from './pages/SchedulePage';
 import KGUPage from './pages/KGUPage';
-import ProfilePage from './pages/ProfilePage';
+import ProfilePage from './pages/ProfilePage.jsx';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import RulesPage from './pages/RulesPage';
 
-// Компонент, который проверяет авторизацию
+// Компонент, который проверяет авторизацию - ОТКЛЮЧЕН
 const ProtectedRoute = ({ children }) => {
-    const { user, loading } = useAuth();
-
-    if (loading) return <div>Загрузка...</div>;
-
-    return user ? children : <Navigate to="/login" replace />;
+    // const { user, loading } = useAuth();
+    // if (loading) return <div>Загрузка...</div>;
+    // return user ? children : <Navigate to="/login" replace />;
+    return children; // Пропускаем всех без проверки
 };
 
-// Компонент для гостя (если авторизован — редирект на /profile)
+// Компонент для гостя - ОТКЛЮЧЕН
 const GuestRoute = ({ children }) => {
-    const { user, loading } = useAuth();
-
-    if (loading) return <div>Загрузка...</div>;
-
-    return !user ? children : <Navigate to="/profile" replace />;
+    // const { user, loading } = useAuth();
+    // if (loading) return <div>Загрузка...</div>;
+    // return !user ? children : <Navigate to="/profile" replace />;
+    return children; // Пропускаем всех без проверки
 };
 
 const AppContent = () => {
@@ -66,16 +64,15 @@ const AppContent = () => {
                 </AppLayout>
             } />
 
-            {/* Защищённые маршруты */}
+            {/* Защищённые маршруты - теперь доступны всем */}
             <Route path="/profile" element={
-                <ProtectedRoute>
                     <AppLayout>
                         <ProfilePage />
                     </AppLayout>
-                </ProtectedRoute>
+
             } />
 
-            {/* Гостевые маршруты — с AppLayout */}
+            {/* Гостевые маршруты — с AppLayout - теперь доступны всем */}
             <Route path="/login" element={
                 <GuestRoute>
                     <AppLayout>
