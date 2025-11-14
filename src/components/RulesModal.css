@@ -1,0 +1,176 @@
+/* src/components/RulesModal.css */
+.rules-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.rules-modal-container {
+    width: 100%;
+    max-width: 800px;
+    max-height: 90vh;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.rules-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 30px;
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-primary);
+}
+
+.rules-modal-title {
+    margin: 0;
+    color: var(--accent-secondary);
+    font-size: 1.3rem;
+}
+
+.rules-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+.rules-modal-close:hover {
+    background: var(--hover-bg);
+}
+
+.rules-modal-content {
+    padding: 30px;
+    overflow-y: auto;
+    background: var(--bg-secondary);
+    flex: 1;
+}
+
+.rule-item {
+    margin-bottom: 25px;
+    padding: 20px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid var(--border-primary);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.rule-item:last-child {
+    margin-bottom: 0;
+}
+
+.rule-item h3 {
+    margin: 0 0 15px;
+    color: var(--accent-secondary);
+    font-size: 1.1rem;
+    border-bottom: 2px solid var(--accent-secondary);
+    padding-bottom: 8px;
+}
+
+.rule-content {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--text-inverted);
+}
+
+.rule-content p {
+    margin: 10px 0;
+}
+
+.rule-content ul {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.rule-content li {
+    margin-bottom: 5px;
+}
+
+.rule-content strong {
+    color: var(--accent-secondary);
+}
+
+/* Стили для скроллбара */
+.rules-modal-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.rules-modal-content::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+.rules-modal-content::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.rules-modal-content::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .rules-modal-overlay {
+        padding: 15px;
+    }
+
+    .rules-modal-container {
+        max-height: 95vh;
+    }
+
+    .rules-modal-header {
+        padding: 15px 20px;
+    }
+
+    .rules-modal-title {
+        font-size: 1.1rem;
+    }
+
+    .rules-modal-content {
+        padding: 20px;
+    }
+
+    .rule-item {
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .rules-modal-overlay {
+        padding: 10px;
+    }
+
+    .rules-modal-header {
+        padding: 12px 15px;
+    }
+
+    .rules-modal-content {
+        padding: 15px;
+    }
+
+    .rule-item {
+        padding: 12px;
+    }
+}

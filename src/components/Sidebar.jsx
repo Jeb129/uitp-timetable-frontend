@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import CalendarIcon from './icons/sidebar/CalendarIcon.jsx';
@@ -6,6 +5,7 @@ import MapIcon from './icons/sidebar/MapIcon.jsx';
 import AuditoriumIcon from './icons/sidebar/AuditoriumIcon.jsx';
 import ScheduleIcon from './icons/sidebar/ScheduleIcon.jsx';
 import KGUIcon from './icons/sidebar/KGUIcon.jsx';
+import RulesIcon from './icons/sidebar/RulesIcon.jsx';
 import './Sidebar.css';
 
 const Sidebar = () => {
@@ -18,12 +18,13 @@ const Sidebar = () => {
         { path: '/auditoriums', icon: <AuditoriumIcon />, label: 'Аудитория' },
         { path: '/schedule', icon: <ScheduleIcon />, label: 'Расписание' },
         { path: '/kgu', icon: <KGUIcon />, label: 'КГУ' },
+        { path: '/rules', icon: <RulesIcon />, label: 'Правила' },
     ];
 
     return (
         <aside className="sidebar">
             <div>
-                <img src="/logo.png" alt="Логотип КГУ" className="logo"/>
+                <img src="/src/assets/KGU.png" alt="Логотип КГУ" className="logo"/>
             </div>
             <nav>
                 {menuItems.map((item) => (
