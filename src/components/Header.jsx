@@ -7,9 +7,9 @@ import BellIcon from './icons/header/BellIcon';
 import ProfileIcon from './icons/header/ProfileIcon';
 import HelpIcon from './icons/header/HelpIcon';
 import CheckIcon from './icons/header/CheckIcon';
+import RulesModal from './RulesModal.jsx';
 import './Header.css';
 
-// Данные уведомлений (временно, потом можно подключить API)
 const initialNotifications = [
     { id: 1, text: 'Аудитория 205 забронирована на 15:00', time: '10 мин назад', read: false },
     { id: 2, text: 'Новое расписание на следующую неделю', time: '1 час назад', read: false },
@@ -27,6 +27,7 @@ const Header = () => {
 
     const [showNotifications, setShowNotifications] = useState(false);
     const [notifications, setNotifications] = useState(initialNotifications);
+    const [isRulesModalOpen, setIsRulesModalOpen] = useState(false); // Состояние для модального окна
 
     const toggleNotifications = () => setShowNotifications(!showNotifications);
 
@@ -44,92 +45,100 @@ const Header = () => {
         }
     };
 
-    const goToRules = () => {
-        navigate('/rules');
+    const handleRulesClick = () => {
+        setIsRulesModalOpen(true); // Открываем модальное окно вместо перехода
     };
 
+    const closeRulesModal = () => {
+        setIsRulesModalOpen(false);
+    };
 
     return (
-        <header className="header">
-            {/* Основной ряд */}
-            <div className="header-main">
-                <h1 className="page-title">
-                    {isMapPage ? 'Карта' :
-                        location.pathname === '/calendar' ? 'Календарь' :
-                            location.pathname === '/auditoriums' ? 'Аудитории' :
-                                location.pathname === '/schedule' ? 'Расписание' :
-                                    'КГУ'}
-                </h1>
-                <div className="header-actions">
-                    <div className="notification-dropdown">
-                        <button className="icon-btn" onClick={toggleNotifications}>
-                            <BellIcon />
-                        </button>
+        <>
+            <header className="header">
+                {/* Основной ряд */}
+                <div className="header-main">
+                    <h1 className="page-title">
+                        {isMapPage ? 'Карта' :
+                            location.pathname === '/calendar' ? 'Календарь' :
+                                location.pathname === '/auditoriums' ? 'Аудитории' :
+                                    location.pathname === '/schedule' ? 'Расписание' :
+                                        'КГУ'}
+                    </h1>
+                    <div className="header-actions">
+                        <div className="notification-dropdown">
+                            <button className="icon-btn" onClick={toggleNotifications}>
+                                <BellIcon />
+                            </button>
 
-                        {showNotifications && (
-                            <div className="notification-menu">
-                                <div className="notification-header">
-                                    <h3>Уведомления</h3>
-                                    <button className="close-btn" onClick={() => setShowNotifications(false)}>×</button>
+                            {showNotifications && (
+                                <div className="notification-menu">
+                                    <div className="notification-header">
+                                        <h3>Уведомления</h3>
+                                        <button className="close-btn" onClick={() => setShowNotifications(false)}>×</button>
+                                    </div>
+                                    <ul className="notification-list">
+                                        {notifications.map((not) => (
+                                            <li key={not.id} className={`notification-item ${not.read ? 'read' : ''}`}>
+                                                <div className="notification-content">
+                                                    <p>{not.text}</p>
+                                                    <span className="notification-time">{not.time}</span>
+                                                </div>
+                                                <button
+                                                    className={`read-button ${not.read ? 'read' : ''}`}
+                                                    onClick={() => toggleReadStatus(not.id)}
+                                                    aria-label={not.read ? 'Отметить как непрочитанное' : 'Отметить как прочитанное'}
+                                                >
+                                                    <CheckIcon />
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
                                 </div>
-                                <ul className="notification-list">
-                                    {notifications.map((not) => (
-                                        <li key={not.id} className={`notification-item ${not.read ? 'read' : ''}`}>
-                                            <div className="notification-content">
-                                                <p>{not.text}</p>
-                                                <span className="notification-time">{not.time}</span>
-                                            </div>
-                                            <button
-                                                className={`read-button ${not.read ? 'read' : ''}`}
-                                                onClick={() => toggleReadStatus(not.id)}
-                                                aria-label={not.read ? 'Отметить как непрочитанное' : 'Отметить как прочитанное'}
-                                            >
-                                                <CheckIcon />
-                                            </button>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
+                            )}
+                        </div>
+
+                        <button className="icon-btn" onClick={goToProfileOrLogin}>
+                            <ProfileIcon />
+                        </button>
                     </div>
-
-                    <button className="icon-btn" onClick={goToProfileOrLogin}>
-                        <ProfileIcon />
-                    </button>
                 </div>
-            </div>
 
-            {/* Дополнительный ряд — видим только на карте, но занимает место всегда */}
-            <div className={`header-secondary ${isMapPage ? 'visible' : ''}`}>
-                <div className="filter-group">
-                    <select value={corpus} onChange={(e) => setCorpus(e.target.value)}>
-                        <option>А</option>
-                        <option>Б</option>
-                        <option>В</option>
-                    </select>
-                    <select value={floor} onChange={(e) => setFloor(e.target.value)}>
-                        <option value="1">1</option>
-                        <option value="2">2</option>
-                        <option value="3">3</option>
-                        <option value="4">4</option>
-                        <option value="5">5</option>
-                    </select>
+                <div className={`header-secondary ${isMapPage ? 'visible' : ''}`}>
+                    <div className="filter-group">
+                        <select value={corpus} onChange={(e) => setCorpus(e.target.value)}>
+                            <option>А</option>
+                            <option>Б</option>
+                            <option>В</option>
+                        </select>
+                        <select value={floor} onChange={(e) => setFloor(e.target.value)}>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                        </select>
 
-                    <div className="stats">
-                        <span>Акт залы: 0</span>
-                        <span>Лекционные: 2</span>
-                        <span>Учебные: 5</span>
+                        <div className="stats">
+                            <span>Акт залы: 0</span>
+                            <span>Лекционные: 2</span>
+                            <span>Учебные: 5</span>
+                        </div>
+
+                        <input type="text" placeholder="Укажите время" />
+                        <input type="text" placeholder="Кол-во мест" />
+
+                        <button className="icon-btn" onClick={handleRulesClick}>
+                            <HelpIcon />
+                        </button>
                     </div>
-
-                    <input type="text" placeholder="Укажите время" />
-                    <input type="text" placeholder="Кол-во мест" />
-
-                    <button className="icon-btn" onClick={goToRules}>
-                        <HelpIcon />
-                    </button>
                 </div>
-            </div>
-        </header>
+            </header>
+
+            {isRulesModalOpen && (
+                <RulesModal onClose={closeRulesModal} />
+            )}
+        </>
     );
 };
 
