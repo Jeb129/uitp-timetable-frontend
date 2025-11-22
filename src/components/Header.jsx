@@ -23,11 +23,11 @@ const Header = () => {
     const isMapPage = location.pathname === '/map';
 
     const [corpus, setCorpus] = useState('Б');
-    const [floor, setFloor] = useState('2'); // Теперь тоже строка
+    const [floor, setFloor] = useState('2');
 
     const [showNotifications, setShowNotifications] = useState(false);
     const [notifications, setNotifications] = useState(initialNotifications);
-    const [isRulesModalOpen, setIsRulesModalOpen] = useState(false); // Состояние для модального окна
+    const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
 
     const toggleNotifications = () => setShowNotifications(!showNotifications);
 
@@ -46,7 +46,7 @@ const Header = () => {
     };
 
     const handleRulesClick = () => {
-        setIsRulesModalOpen(true); // Открываем модальное окно вместо перехода
+        setIsRulesModalOpen(true);
     };
 
     const closeRulesModal = () => {
@@ -63,7 +63,10 @@ const Header = () => {
                             location.pathname === '/calendar' ? 'Календарь' :
                                 location.pathname === '/auditoriums' ? 'Аудитории' :
                                     location.pathname === '/schedule' ? 'Расписание' :
-                                        'КГУ'}
+                                        location.pathname === '/profile' ? 'Профиль' :
+                                            location.pathname === '/rules' ? 'Правила' :
+                                                location.pathname === '/admin' ? 'Администрирование' :
+                                                    'КГУ'}
                     </h1>
                     <div className="header-actions">
                         <div className="notification-dropdown">
@@ -104,37 +107,41 @@ const Header = () => {
                     </div>
                 </div>
 
-                <div className={`header-secondary ${isMapPage ? 'visible' : ''}`}>
-                    <div className="filter-group">
-                        <select value={corpus} onChange={(e) => setCorpus(e.target.value)}>
-                            <option>А</option>
-                            <option>Б</option>
-                            <option>В</option>
-                        </select>
-                        <select value={floor} onChange={(e) => setFloor(e.target.value)}>
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                            <option value="4">4</option>
-                            <option value="5">5</option>
-                        </select>
+                {/* Дополнительный ряд - показывается только на карте */}
+                {isMapPage && (
+                    <div className="header-secondary visible">
+                        <div className="filter-group">
+                            <select value={corpus} onChange={(e) => setCorpus(e.target.value)}>
+                                <option>А</option>
+                                <option>Б</option>
+                                <option>В</option>
+                            </select>
+                            <select value={floor} onChange={(e) => setFloor(e.target.value)}>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                            </select>
 
-                        <div className="stats">
-                            <span>Акт залы: 0</span>
-                            <span>Лекционные: 2</span>
-                            <span>Учебные: 5</span>
+                            <div className="stats">
+                                <span>Акт залы: 0</span>
+                                <span>Лекционные: 2</span>
+                                <span>Учебные: 5</span>
+                            </div>
+
+                            <input type="text" placeholder="Укажите время" />
+                            <input type="text" placeholder="Кол-во мест" />
+
+                            <button className="icon-btn" onClick={handleRulesClick}>
+                                <HelpIcon />
+                            </button>
                         </div>
-
-                        <input type="text" placeholder="Укажите время" />
-                        <input type="text" placeholder="Кол-во мест" />
-
-                        <button className="icon-btn" onClick={handleRulesClick}>
-                            <HelpIcon />
-                        </button>
                     </div>
-                </div>
+                )}
             </header>
 
+            {/* Модальное окно правил */}
             {isRulesModalOpen && (
                 <RulesModal onClose={closeRulesModal} />
             )}

@@ -3,6 +3,10 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext();
 
+const isAdmin = () => {
+    return user && user.role === 'admin';
+};
+
 export const useAuth = () => {
     const context = useContext(AuthContext);
     if (!context) {
@@ -41,6 +45,7 @@ export const AuthProvider = ({ children }) => {
         login,
         logout,
         loading,
+        isAdmin,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
