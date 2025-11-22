@@ -12,6 +12,7 @@ import ProfilePage from './pages/ProfilePage.jsx';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import RulesPage from './pages/RulesPage';
+import AdminPage from "./pages/AdminPage.jsx";
 
 // Компонент, который проверяет авторизацию - ОТКЛЮЧЕН
 const ProtectedRoute = ({ children }) => {
@@ -19,6 +20,18 @@ const ProtectedRoute = ({ children }) => {
     // if (loading) return <div>Загрузка...</div>;
     // return user ? children : <Navigate to="/login" replace />;
     return children; // Пропускаем всех без проверки
+};
+
+const ProtectedAdminRoute = ({ children }) => {
+    const { user, loading, isAdmin } = useAuth();
+
+    if (loading) return <div>Загрузка...</div>;
+
+    if (!user) return <Navigate to="/login" replace />;
+
+    if (!isAdmin()) return <Navigate to="/" replace />;
+
+    return children;
 };
 
 // Компонент для гостя - ОТКЛЮЧЕН
@@ -62,6 +75,13 @@ const AppContent = () => {
                 <AppLayout>
                     <KGUPage />
                 </AppLayout>
+            } />
+            <Route path="/admin" element={
+                // <ProtectedRoute>
+                    <AppLayout>
+                        <AdminPage />
+                    </AppLayout>
+                // </ProtectedRoute>
             } />
 
             {/* Защищённые маршруты - теперь доступны всем */}
