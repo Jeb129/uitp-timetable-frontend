@@ -66,9 +66,17 @@
 
 .menu-item .label {
     font-size: 0.8rem;
+    line-height: 1.1;
+    max-width: 70px;
+    word-wrap: break-word;
 }
 
-/* Специальные стили для кнопки правил */
-.rules-button {
-    /* Можно добавить особые стили если нужно */
+/* Специальные стили для длинных названий */
+.menu-item .label.long-text {
+    font-size: 0.7rem;
+}
+
+.menu-item .label.very-long-text {
+    font-size: 0.65rem;
+    line-height: 1;
 }

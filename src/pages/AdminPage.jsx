@@ -1,12 +1,16 @@
-// src/pages/AdminPage.jsx
+    // src/pages/AdminPage.jsx
 import React, { useState, useEffect } from 'react';
 import './AdminPage.css';
+import BookingDetailsModal from '../components/modals/BookingDetailsModal.jsx';
 
 const AdminPage = () => {
     const [activeTab, setActiveTab] = useState('stats');
     const [selectedUsers, setSelectedUsers] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+
+    const [selectedBooking, setSelectedBooking] = useState(null);
+    const [showBookingModal, setShowBookingModal] = useState(false);
 
     // Статические данные для демонстрации
     const [users, setUsers] = useState([
@@ -274,6 +278,26 @@ const AdminPage = () => {
         }
     };
     */
+
+    const handleViewBooking = (booking) => {
+        setSelectedBooking(booking);
+        setShowBookingModal(true);
+    };
+
+    const handleCloseBookingModal = () => {
+        setShowBookingModal(false);
+        setSelectedBooking(null);
+    };
+
+    const handleApproveBooking = async (bookingId) => {
+        await handleBookingAction(bookingId, 'approve');
+        handleCloseBookingModal();
+    };
+
+    const handleRejectBooking = async (bookingId) => {
+        await handleBookingAction(bookingId, 'reject');
+        handleCloseBookingModal();
+    };
 
     // Заглушки для действий (для демонстрации)
     const handleUserAction = async (userId, action, data = {}) => {
@@ -622,7 +646,8 @@ const AdminPage = () => {
                                             <td className="cell-status">{getStatusBadge(booking.status)}</td>
                                             <td className="cell-actions">
                                                 <div className="action-buttons">
-                                                    <button className="btn-view">Просмотр</button>
+                                                    <button className="btn-view" onClick={() => handleViewBooking(booking)}>
+                                                        Просмотр </button>
                                                     <button className="btn-edit">Изменить</button>
                                                 </div>
                                             </td>
@@ -682,7 +707,12 @@ const AdminPage = () => {
                                                     >
                                                         Отклонить
                                                     </button>
-                                                    <button className="btn-details">Подробнее</button>
+                                                    <button
+                                                        className="btn-details"
+                                                        onClick={() => handleViewBooking(booking)}
+                                                    >
+                                                        Подробнее
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -694,6 +724,14 @@ const AdminPage = () => {
                     )}
                 </div>
             </div>
+            {showBookingModal && (
+                <BookingDetailsModal
+                    booking={selectedBooking}
+                    onClose={handleCloseBookingModal}
+                    onApprove={handleApproveBooking}
+                    onReject={handleRejectBooking}
+                />
+            )}
         </div>
     );
 };
