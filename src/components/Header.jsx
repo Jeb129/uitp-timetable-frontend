@@ -7,7 +7,7 @@ import BellIcon from './icons/header/BellIcon';
 import ProfileIcon from './icons/header/ProfileIcon';
 import HelpIcon from './icons/header/HelpIcon';
 import CheckIcon from './icons/header/CheckIcon';
-import RulesModal from './RulesModal.jsx';
+import RulesModal from './modals/RulesModal.jsx';
 import './Header.css';
 
 const initialNotifications = [
