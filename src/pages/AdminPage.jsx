@@ -1,7 +1,8 @@
-    // src/pages/AdminPage.jsx
+
 import React, { useState, useEffect } from 'react';
 import './AdminPage.css';
 import BookingDetailsModal from '../components/modals/BookingDetailsModal.jsx';
+import AdminCharts from '../components/charts/AdminCharts.jsx';
 
 const AdminPage = () => {
     const [activeTab, setActiveTab] = useState('stats');
@@ -103,7 +104,6 @@ const AdminPage = () => {
             // Имитация загрузки данных
             await new Promise(resolve => setTimeout(resolve, 500));
 
-            // В реальном приложении здесь будут API вызовы:
             /*
             switch (activeTab) {
                 case 'stats':
@@ -131,7 +131,7 @@ const AdminPage = () => {
         }
     };
 
-    // Шаблоны API функций (закомментированы)
+    // Шаблоны API функций
     /*
     const loadStatistics = async () => {
         const response = await fetch('/api/admin/statistics', {
@@ -496,6 +496,8 @@ const AdminPage = () => {
                                     </button>
                                 </div>
                             </div>
+
+                            {/* Блок с карточками статистики */}
                             <div className="stats-container">
                                 <div className="stats-grid-three">
                                     <div className="stat-card">
@@ -531,6 +533,13 @@ const AdminPage = () => {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Компонент с графиками */}
+                            <AdminCharts
+                                statistics={statistics}
+                                bookings={bookings}
+                                users={users}
+                            />
                         </div>
                     )}
 
