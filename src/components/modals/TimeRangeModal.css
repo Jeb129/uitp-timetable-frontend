@@ -1,0 +1,322 @@
+.time-range-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.time-range-modal-container {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.time-range-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #e9ecef;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px 12px 0 0;
+    color: white;
+}
+
+.time-range-modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+}
+
+.close-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.time-range-modal-content {
+    padding: 25px;
+}
+
+.quick-select-section {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.quick-select-section h3 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.quick-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.quick-buttons button {
+    background: #f8f9fa;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #495057;
+}
+
+.quick-buttons button:hover {
+    background: #007bff;
+    border-color: #007bff;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.time-slider-section {
+    margin-bottom: 30px;
+}
+
+.time-slider-section h3 {
+    margin: 0 0 20px 0;
+    color: #333;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+/* Шкала времени */
+.time-scale {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding: 0 10px;
+}
+
+.time-marker {
+    text-align: center;
+    font-size: 12px;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.time-marker span {
+    display: block;
+    transform: translateX(-50%);
+}
+
+/* Ползунок - КРИТИЧЕСКИЕ ИСПРАВЛЕНИЯ */
+.time-slider {
+    position: relative;
+    height: 60px;
+    margin: 20px 0;
+    cursor: pointer;
+    /* Важно для правильного позиционирования */
+    width: 100%;
+    padding: 0 10px;
+    box-sizing: border-box;
+}
+
+.slider-track {
+    position: absolute;
+    top: 50%;
+    left: 10px;
+    right: 10px;
+    height: 6px;
+    background: #e9ecef;
+    border-radius: 3px;
+    transform: translateY(-50%);
+}
+
+.slider-range {
+    position: absolute;
+    top: 50%;
+    left: 10px;
+    height: 6px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 3px;
+    transform: translateY(-50%);
+    z-index: 1;
+    /* Убираем transition чтобы не было задержки */
+    transition: none;
+}
+
+/* Бегунки - КРИТИЧЕСКИЕ ИСПРАВЛЕНИЯ */
+.slider-handle {
+    position: absolute;
+    top: 50%;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border: 3px solid #667eea;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    cursor: grab;
+    z-index: 2;
+    /* Убираем transition чтобы не было задержки */
+    transition: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.slider-handle:hover {
+    transform: translate(-50%, -50%) scale(1.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.slider-handle:active {
+    cursor: grabbing;
+    transform: translate(-50%, -50%) scale(1.3);
+}
+
+.start-handle {
+    border-color: #667eea;
+}
+
+.end-handle {
+    border-color: #764ba2;
+}
+
+/* Подсказки бегунков */
+.handle-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    margin-bottom: 8px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+.handle-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: #333;
+}
+
+.slider-handle:hover .handle-tooltip {
+    opacity: 1;
+}
+
+/* Информация о минимальном интервале */
+.min-interval-info {
+    text-align: center;
+    font-size: 12px;
+    color: #6c757d;
+    margin-top: 10px;
+    font-style: italic;
+}
+
+/* Предпросмотр времени */
+.time-preview {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+}
+
+.time-preview h3 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.selected-time {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #667eea;
+    margin-bottom: 8px;
+    background: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 2px solid #667eea;
+    display: inline-block;
+}
+
+.duration-info {
+    font-size: 14px;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.time-range-modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding: 20px;
+    border-top: 1px solid #e9ecef;
+    background: #f8f9fa;
+    border-radius: 0 0 12px 12px;
+}
+
+.btn-cancel {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.btn-cancel:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+}
+
+.btn-apply {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.btn-apply:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}

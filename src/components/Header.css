@@ -249,3 +249,201 @@
     padding: 8px 10px;
     border-radius: 4px;
 }
+
+/* Стили для кнопки выбора времени */
+.time-range-btn {
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--border-primary);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    cursor: pointer;
+    min-width: 120px;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.time-range-btn:hover {
+    border-color: var(--accent-secondary);
+    background: var(--bg-primary);
+}
+
+.time-range-btn:focus {
+    outline: none;
+    border-color: var(--accent-secondary);
+}
+/* Стили для фильтров с подписями */
+.filter-with-label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+}
+
+.filter-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Уменьшенные селекты */
+.corpus-select, .floor-select {
+    padding: 6px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border-primary);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    appearance: none;
+    cursor: pointer;
+    min-width: 50px;
+    text-align: center;
+    height: 32px;
+}
+
+.corpus-select, .floor-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23a0aec0' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+    background-size: 10px;
+    padding-right: 20px;
+}
+
+.corpus-select:focus, .floor-select:focus {
+    outline: none;
+    border-color: var(--accent-secondary);
+}
+
+/* Уменьшенное поле для количества мест */
+.seats-input {
+    padding: 6px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border-primary);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    width: 50px;
+    height: 32px;
+    text-align: center;
+}
+
+.seats-input:focus {
+    outline: none;
+    border-color: var(--accent-secondary);
+}
+
+.seats-input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+/* Обновленная кнопка времени */
+.time-range-btn {
+    padding: 6px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border-primary);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    min-width: 100px;
+    text-align: center;
+    transition: all 0.2s ease;
+    height: 32px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.time-range-btn:hover {
+    border-color: var(--accent-secondary);
+    background: var(--bg-primary);
+}
+
+.time-range-btn:focus {
+    outline: none;
+    border-color: var(--accent-secondary);
+}
+
+/* Стили для секции доступных аудиторий */
+.auditoriums-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+}
+
+.auditoriums-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.auditoriums-stats {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: var(--bg-secondary);
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--border-primary);
+    height: 32px;
+}
+
+.stat-item {
+    font-size: 0.8rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.stat-item:not(:last-child)::after {
+    content: "|";
+    margin-left: 12px;
+    color: var(--border-primary);
+}
+
+/* Адаптивность для маленьких экранов */
+@media (max-width: 768px) {
+    .filter-with-label {
+        min-width: 60px;
+    }
+
+    .time-range-btn {
+        min-width: 80px;
+        font-size: 0.8rem;
+    }
+
+    .seats-input {
+        width: 45px;
+    }
+
+    .auditoriums-stats {
+        gap: 8px;
+        padding: 6px 8px;
+    }
+
+    .stat-item {
+        font-size: 0.75rem;
+    }
+
+    .stat-item:not(:last-child)::after {
+        margin-left: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .auditoriums-stats {
+        flex-direction: column;
+        gap: 2px;
+        height: auto;
+        padding: 4px 6px;
+    }
+
+    .stat-item:not(:last-child)::after {
+        content: "";
+        margin-left: 0;
+    }
+}

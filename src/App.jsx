@@ -14,6 +14,7 @@ import RegisterPage from './pages/RegisterPage';
 import RulesPage from './pages/RulesPage';
 import AdminPage from "./pages/AdminPage.jsx";
 
+
 // Компонент, который проверяет авторизацию - ОТКЛЮЧЕН
 const ProtectedRoute = ({ children }) => {
     // const { user, loading } = useAuth();
@@ -78,17 +79,17 @@ const AppContent = () => {
             } />
             <Route path="/admin" element={
                 // <ProtectedRoute>
-                    <AppLayout>
-                        <AdminPage />
-                    </AppLayout>
+                <AppLayout>
+                    <AdminPage />
+                </AppLayout>
                 // </ProtectedRoute>
             } />
 
             {/* Защищённые маршруты - теперь доступны всем */}
             <Route path="/profile" element={
-                    <AppLayout>
-                        <ProfilePage />
-                    </AppLayout>
+                <AppLayout>
+                    <ProfilePage />
+                </AppLayout>
 
             } />
 
@@ -119,9 +120,9 @@ const AppContent = () => {
 function App() {
     return (
         <AuthProvider>
-            <Router>
-                <AppContent />
-            </Router>
+                <Router>
+                    <AppContent />
+                </Router>
         </AuthProvider>
     );
 }
