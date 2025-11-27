@@ -23,8 +23,6 @@ const Header = () => {
     const isMapPage = location.pathname === '/map';
 
     const [corpus, setCorpus] = useState('Б');
-    const [floor, setFloor] = useState('2');
-
     const [showNotifications, setShowNotifications] = useState(false);
     const [notifications, setNotifications] = useState(initialNotifications);
     const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
@@ -116,14 +114,6 @@ const Header = () => {
                                 <option>Б</option>
                                 <option>В</option>
                             </select>
-                            <select value={floor} onChange={(e) => setFloor(e.target.value)}>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3">3</option>
-                                <option value="4">4</option>
-                                <option value="5">5</option>
-                            </select>
-
                             <div className="stats">
                                 <span>Акт залы: 0</span>
                                 <span>Лекционные: 2</span>
