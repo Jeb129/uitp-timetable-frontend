@@ -1,0 +1,49 @@
+/* src/components/InteractiveSVG.css */
+.interactive-svg-container {
+    width: 100%;
+    height: 100%;
+}
+
+.interactive-svg-container svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.svg-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 400px;
+    font-size: 16px;
+    color: #666;
+}
+
+/* Стили для интерактивных rect */
+.interactive-rect {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    stroke: transparent;
+    stroke-width: 1px;
+}
+
+/* Эффект при наведении */
+.interactive-rect.rect-hover {
+    filter: brightness(0.8);
+    stroke: #1976d2;
+    stroke-width: 2px;
+}
+
+/* Эффект для выбранного rect */
+.interactive-rect.rect-selected {
+    filter: brightness(1.1);
+    stroke: #1565c0;
+    stroke-width: 3px;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { stroke-width: 3px; }
+    50% { stroke-width: 5px; }
+    100% { stroke-width: 3px; }
+}

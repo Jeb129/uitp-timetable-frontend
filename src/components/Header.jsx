@@ -136,6 +136,15 @@ const Header = () => {
                 {isMapPage && (
                     <div className="header-secondary visible">
                         <div className="filter-group">
+                            <select value={corpus} onChange={(e) => setCorpus(e.target.value)}>
+                                <option>А</option>
+                                <option>Б</option>
+                                <option>В</option>
+                            </select>
+                            <div className="stats">
+                                <span>Акт залы: 0</span>
+                                <span>Лекционные: 2</span>
+                                <span>Учебные: 5</span>
                             {/* Корпус с подписью */}
                             <div className="filter-with-label">
                                 <label className="filter-label">Корпус</label>
