@@ -8,6 +8,7 @@ import ProfileIcon from './icons/header/ProfileIcon';
 import HelpIcon from './icons/header/HelpIcon';
 import CheckIcon from './icons/header/CheckIcon';
 import RulesModal from './modals/RulesModal.jsx';
+import TimeRangeModal from './modals/TimeRangeModal.jsx';
 import './Header.css';
 
 const initialNotifications = [
@@ -23,9 +24,14 @@ const Header = () => {
     const isMapPage = location.pathname === '/map';
 
     const [corpus, setCorpus] = useState('Б');
+    const [floor, setFloor] = useState('2');
+    const [selectedTime, setSelectedTime] = useState('');
+    const [seats, setSeats] = useState('');
+
     const [showNotifications, setShowNotifications] = useState(false);
     const [notifications, setNotifications] = useState(initialNotifications);
     const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
+    const [isTimeRangeModalOpen, setIsTimeRangeModalOpen] = useState(false);
 
     const toggleNotifications = () => setShowNotifications(!showNotifications);
 
@@ -49,6 +55,27 @@ const Header = () => {
 
     const closeRulesModal = () => {
         setIsRulesModalOpen(false);
+    };
+
+    const handleTimeRangeClick = () => {
+        setIsTimeRangeModalOpen(true);
+    };
+
+    const handleTimeRangeSelect = (timeRange) => {
+        setSelectedTime(timeRange);
+        setIsTimeRangeModalOpen(false);
+    };
+
+    const closeTimeRangeModal = () => {
+        setIsTimeRangeModalOpen(false);
+    };
+
+    const handleSeatsChange = (e) => {
+        const value = e.target.value;
+        // Разрешаем только цифры
+        if (value === '' || /^\d+$/.test(value)) {
+            setSeats(value);
+        }
     };
 
     return (
@@ -118,10 +145,69 @@ const Header = () => {
                                 <span>Акт залы: 0</span>
                                 <span>Лекционные: 2</span>
                                 <span>Учебные: 5</span>
+                            {/* Корпус с подписью */}
+                            <div className="filter-with-label">
+                                <label className="filter-label">Корпус</label>
+                                <select
+                                    value={corpus}
+                                    onChange={(e) => setCorpus(e.target.value)}
+                                    className="corpus-select"
+                                >
+                                    <option value="А">А</option>
+                                    <option value="Б">Б</option>
+                                    <option value="В">В</option>
+                                </select>
                             </div>
 
-                            <input type="text" placeholder="Укажите время" />
-                            <input type="text" placeholder="Кол-во мест" />
+                            {/* Этаж с подписью */}
+                            <div className="filter-with-label">
+                                <label className="filter-label">Этаж</label>
+                                <select
+                                    value={floor}
+                                    onChange={(e) => setFloor(e.target.value)}
+                                    className="floor-select"
+                                >
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5</option>
+                                </select>
+                            </div>
+
+                            {/* Доступные аудитории с общим лейблом */}
+                            <div className="auditoriums-section">
+                                <label className="auditoriums-label">Доступные аудитории</label>
+                                <div className="auditoriums-stats">
+                                    <span className="stat-item">Акт залы: 0</span>
+                                    <span className="stat-item">Лекционные: 2</span>
+                                    <span className="stat-item">Учебные: 5</span>
+                                </div>
+                            </div>
+
+                            {/* Кнопка выбора времени */}
+                            <div className="filter-with-label">
+                                <label className="filter-label">Время</label>
+                                <button
+                                    className="time-range-btn"
+                                    onClick={handleTimeRangeClick}
+                                >
+                                    {selectedTime || 'Выбрать время'}
+                                </button>
+                            </div>
+
+                            {/* Поле для количества мест - уменьшенное */}
+                            <div className="filter-with-label">
+                                <label className="filter-label">Мест</label>
+                                <input
+                                    type="text"
+                                    placeholder="0"
+                                    value={seats}
+                                    onChange={handleSeatsChange}
+                                    className="seats-input"
+                                    maxLength={3}
+                                />
+                            </div>
 
                             <button className="icon-btn" onClick={handleRulesClick}>
                                 <HelpIcon />
@@ -134,6 +220,15 @@ const Header = () => {
             {/* Модальное окно правил */}
             {isRulesModalOpen && (
                 <RulesModal onClose={closeRulesModal} />
+            )}
+
+            {/* Модальное окно выбора временного интервала */}
+            {isTimeRangeModalOpen && (
+                <TimeRangeModal
+                    onClose={closeTimeRangeModal}
+                    onSelect={handleTimeRangeSelect}
+                    selectedTime={selectedTime}
+                />
             )}
         </>
     );

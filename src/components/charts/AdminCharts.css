@@ -1,0 +1,131 @@
+.charts-container {
+    padding: 20px 30px;
+    background: var(--bg-secondary);
+}
+
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+    gap: 24px;
+    margin: 0 auto;
+    max-width: 100%;
+}
+
+.chart-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-primary);
+    transition: box-shadow 0.2s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.chart-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.chart-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    text-align: center;
+    color: var(--text-primary);
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-primary);
+    flex-shrink: 0;
+}
+
+.chart-wrapper {
+    height: 320px;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+    flex: 1;
+}
+
+/* Специфичные стили для центрирования графиков */
+.chart-wrapper > div {
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+
+/* Стили для canvas внутри графиков */
+.chart-wrapper canvas {
+    max-width: 100% !important;
+    max-height: 100% !important;
+    margin: 0 auto;
+}
+
+/* Специальные стили для круговой диаграммы */
+.chart-wrapper .react-doughnut-chart {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Убираем нижний блок со статистикой */
+.charts-footer {
+    display: none;
+}
+
+/* Адаптивность */
+@media (max-width: 1200px) {
+    .charts-grid {
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 20px;
+    }
+}
+
+@media (max-width: 900px) {
+    .charts-container {
+        padding: 15px 20px;
+    }
+
+    .charts-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .chart-card {
+        padding: 20px;
+    }
+
+    .chart-wrapper {
+        height: 280px;
+    }
+}
+
+@media (max-width: 768px) {
+    .charts-container {
+        padding: 15px 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .charts-container {
+        padding: 10px 15px;
+    }
+
+    .chart-card {
+        padding: 16px;
+        margin: 0;
+    }
+
+    .chart-wrapper {
+        height: 250px;
+        padding: 5px;
+    }
+
+    .chart-title {
+        font-size: 14px;
+        margin-bottom: 16px;
+    }
+}
