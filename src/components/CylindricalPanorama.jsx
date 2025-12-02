@@ -9,8 +9,6 @@ const CylindricalPanorama = ({ imageUrl, onClose }) => {
     const sceneRef = useRef(null);
     const cameraRef = useRef(null);
     const meshRef = useRef(null);
-    const raycasterRef = useRef(new THREE.Raycaster());
-    const mouseRef = useRef(new THREE.Vector2());
 
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -18,13 +16,8 @@ const CylindricalPanorama = ({ imageUrl, onClose }) => {
 
     const isUserInteractingRef = useRef(false);
     const onMouseDownMouseXRef = useRef(0);
-    const onMouseDownMouseYRef = useRef(0);
     const onMouseDownLonRef = useRef(0);
-    const onMouseDownLatRef = useRef(0);
     const lonRef = useRef(0);
-    const latRef = useRef(0);
-    const phiRef = useRef(0);
-    const thetaRef = useRef(0);
 
     const animationIdRef = useRef(null);
 
@@ -81,13 +74,13 @@ const CylindricalPanorama = ({ imageUrl, onClose }) => {
 
             // Создаем камеру
             const camera = new THREE.PerspectiveCamera(
-                1, // fov
+                75, // Увеличиваем поле зрения для лучшего обзора
                 mountRef.current.clientWidth / mountRef.current.clientHeight,
                 0.1,
                 1000
             );
             cameraRef.current = camera;
-            camera.position.z = 0.1;
+            camera.position.set(0, 0, 0.1); // Позиционируем камеру внутри цилиндра
 
             // Создаем рендерер
             const renderer = new THREE.WebGLRenderer({
@@ -111,8 +104,8 @@ const CylindricalPanorama = ({ imageUrl, onClose }) => {
             // Создаем цилиндр для панорамы
             const geometry = new THREE.CylinderGeometry(1, 1, 2, 60, 60, true);
 
-            // Разворачиваем внутрь
-            geometry.scale(-1, 1, 1);
+            // Разворачиваем внутрь и отражаем по горизонтали
+            geometry.scale(1, 1, 1);
 
             // Создаем материал с тестовой текстурой
             const texture = createTestTexture();
@@ -128,10 +121,6 @@ const CylindricalPanorama = ({ imageUrl, onClose }) => {
             mesh.rotation.y = Math.PI; // Поворачиваем, чтобы шов был сзади
             scene.add(mesh);
             meshRef.current = mesh;
-
-            // Добавляем источник света (хотя для MeshBasicMaterial не обязательно)
-            const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
-            scene.add(ambientLight);
 
             // Загружаем реальную текстуру
             const textureLoader = new THREE.TextureLoader();
@@ -183,22 +172,9 @@ const CylindricalPanorama = ({ imageUrl, onClose }) => {
             const animate = () => {
                 animationIdRef.current = requestAnimationFrame(animate);
 
-                // Автоматическое вращение, если пользователь не взаимодействует
-                if (!isUserInteractingRef.current && meshRef.current) {
-                    lonRef.current += 0; // Скорость автоматического вращения
-                }
-
-                // Вычисляем новые углы
-                latRef.current = Math.max(-85, Math.min(85, latRef.current));
-                phiRef.current = THREE.MathUtils.degToRad(90 - latRef.current);
-                thetaRef.current = THREE.MathUtils.degToRad(lonRef.current);
-
-                // Обновляем позицию камеры
-                if (cameraRef.current) {
-                    cameraRef.current.position.x = 100 * Math.sin(phiRef.current) * Math.cos(thetaRef.current);
-                    cameraRef.current.position.y = 100 * Math.cos(phiRef.current);
-                    cameraRef.current.position.z = 100 * Math.sin(phiRef.current) * Math.sin(thetaRef.current);
-                    cameraRef.current.lookAt(0, 0, 0);
+                // Обновляем вращение цилиндра на основе текущего угла
+                if (meshRef.current) {
+                    meshRef.current.rotation.y = -lonRef.current * (Math.PI / 180);
                 }
 
                 renderer.render(scene, camera);
@@ -244,6 +220,11 @@ const CylindricalPanorama = ({ imageUrl, onClose }) => {
         context.fillText('Тестовое изображение', canvas.width / 2, canvas.height / 2 + 100);
         context.fillText('Размер: 2048x1024', canvas.width / 2, canvas.height / 2 + 160);
 
+        // Добавляем стрелки для указания направления
+        context.font = 'bold 60px Arial';
+        context.fillText('← ПОВОРОТ ВЛЕВО', 300, 800);
+        context.fillText('ПОВОРОТ ВПРАВО →', canvas.width - 300, 800);
+
         // Добавляем сетку
         context.strokeStyle = 'rgba(255, 255, 255, 0.3)';
         context.lineWidth = 2;
@@ -280,15 +261,13 @@ const CylindricalPanorama = ({ imageUrl, onClose }) => {
 
             isUserInteractingRef.current = true;
             onMouseDownMouseXRef.current = event.clientX;
-            onMouseDownMouseYRef.current = event.clientY;
             onMouseDownLonRef.current = lonRef.current;
-            onMouseDownLatRef.current = latRef.current;
         };
 
         const onDocumentMouseMove = (event) => {
             if (isUserInteractingRef.current) {
-                lonRef.current = (onMouseDownMouseXRef.current - event.clientX) * 0.1 + onMouseDownLonRef.current;
-                latRef.current = (event.clientY - onMouseDownMouseYRef.current) * 0.1 + onMouseDownLatRef.current;
+                // Только горизонтальное вращение
+                lonRef.current = (onMouseDownMouseXRef.current - event.clientX) * 0.5 + onMouseDownLonRef.current;
             }
         };
 
@@ -297,7 +276,7 @@ const CylindricalPanorama = ({ imageUrl, onClose }) => {
         };
 
         const onDocumentMouseWheel = (event) => {
-            // Можно добавить zoom, но для панорамы обычно не нужно
+            // Отключаем zoom
             event.preventDefault();
         };
 
@@ -312,17 +291,15 @@ const CylindricalPanorama = ({ imageUrl, onClose }) => {
                 event.preventDefault();
                 isUserInteractingRef.current = true;
                 onMouseDownMouseXRef.current = event.touches[0].pageX;
-                onMouseDownMouseYRef.current = event.touches[0].pageY;
                 onMouseDownLonRef.current = lonRef.current;
-                onMouseDownLatRef.current = latRef.current;
             }
         };
 
         const onDocumentTouchMove = (event) => {
             if (event.touches.length === 1 && isUserInteractingRef.current) {
                 event.preventDefault();
-                lonRef.current = (onMouseDownMouseXRef.current - event.touches[0].pageX) * 0.1 + onMouseDownLonRef.current;
-                latRef.current = (event.touches[0].pageY - onMouseDownMouseYRef.current) * 0.1 + onMouseDownLatRef.current;
+                // Только горизонтальное вращение
+                lonRef.current = (onMouseDownMouseXRef.current - event.touches[0].pageX) * 0.5 + onMouseDownLonRef.current;
             }
         };
 
@@ -412,9 +389,6 @@ const CylindricalPanorama = ({ imageUrl, onClose }) => {
     // Сброс вида
     const resetView = useCallback(() => {
         lonRef.current = 0;
-        latRef.current = 0;
-        phiRef.current = 0;
-        thetaRef.current = 0;
     }, []);
 
     return (
@@ -473,9 +447,9 @@ const CylindricalPanorama = ({ imageUrl, onClose }) => {
                 </div>
 
                 <div className="panorama-instructions">
-                    <p>🖱️ Перетаскивайте для осмотра помещения в 3D</p>
-                    <p>📱 На мобильных устройствах - двигайте пальцем</p>
-                    <p>🔄 Панорама автоматически вращается</p>
+                    <p>🖱️ Перетаскивайте горизонтально для осмотра помещения в 3D</p>
+                    <p>📱 На мобильных устройствах - двигайте пальцем горизонтально</p>
+                    <p>🔄 Панорама показывает только горизонтальный обзор 360°</p>
                 </div>
 
                 {/* Отладочная информация */}
