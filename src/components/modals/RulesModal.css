@@ -174,3 +174,128 @@
         padding: 12px;
     }
 }
+/* Добавьте в RoomModal.css */
+.panorama-section {
+    margin: 25px 0;
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 10px;
+    text-align: center;
+    color: white;
+}
+
+.panorama-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+}
+
+.panorama-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.panorama-icon {
+    font-size: 1.2em;
+}
+
+.panorama-hint {
+    margin: 10px 0 0 0;
+    font-size: 0.9em;
+    opacity: 0.9;
+}
+
+
+/* src/components/modals/RoomModal.css */
+.panorama-section {
+    margin: 25px 0;
+    text-align: center;
+}
+
+.panorama-btn {
+    background: linear-gradient(135deg, #3949ab, #5c6bc0);
+    color: white;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 6px 20px rgba(57, 73, 171, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.panorama-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.7s ease;
+}
+
+.panorama-btn:hover::before {
+    left: 100%;
+}
+
+.panorama-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 25px rgba(57, 73, 171, 0.4);
+    background: linear-gradient(135deg, #303f9f, #3949ab);
+}
+
+.panorama-btn:active {
+    transform: translateY(-1px);
+}
+
+.panorama-btn .panorama-icon {
+    font-size: 1.3rem;
+    animation: float 3s ease-in-out infinite;
+}
+
+.panorama-hint {
+    margin-top: 10px;
+    color: #666;
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+/* Эффект пульсации для кнопки */
+@keyframes pulse-glow {
+    0%, 100% {
+        box-shadow: 0 6px 20px rgba(57, 73, 171, 0.3);
+    }
+    50% {
+        box-shadow: 0 6px 25px rgba(57, 73, 171, 0.5);
+    }
+}
+
+.panorama-btn {
+    animation: pulse-glow 3s ease-in-out infinite;
+}

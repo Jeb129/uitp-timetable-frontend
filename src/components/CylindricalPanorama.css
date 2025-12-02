@@ -1,0 +1,372 @@
+/* src/components/panorama/CylindricalPanorama.css */
+.cylindrical-panorama-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.95);
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.cylindrical-panorama-container {
+    background: #1a1a1a;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 1400px;
+    height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    border: 1px solid #333;
+}
+
+.panorama-header {
+    padding: 20px 24px;
+    background: linear-gradient(135deg, #1a237e, #283593);
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #3949ab;
+}
+
+.panorama-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.panorama-header h3::before {
+    content: '🌐';
+    font-size: 1.3rem;
+}
+
+.header-controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.reset-btn, .close-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    backdrop-filter: blur(10px);
+}
+
+.reset-btn:hover, .close-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.close-btn {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.panorama-content {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: #000;
+}
+
+.panorama-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #0a0a0a, #1a1a1a);
+    z-index: 10;
+    color: white;
+    text-align: center;
+}
+
+.panorama-loading .loading-spinner {
+    width: 60px;
+    height: 60px;
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-top: 4px solid #3949ab;
+    border-radius: 50%;
+    animation: spin 1.2s linear infinite;
+    margin-bottom: 20px;
+}
+
+.panorama-loading p {
+    font-size: 1.1rem;
+    margin: 5px 0;
+}
+
+.loading-subtext {
+    font-size: 0.9rem;
+    color: #aaa;
+}
+
+.panorama-error {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #1a0000, #2a0a0a);
+    z-index: 10;
+    color: white;
+    text-align: center;
+    padding: 20px;
+}
+
+.error-icon {
+    font-size: 3.5rem;
+    margin-bottom: 20px;
+    animation: shake 0.5s ease-in-out;
+}
+
+.error-main {
+    font-size: 1.2rem;
+    color: #ff6b6b;
+    margin-bottom: 20px;
+    font-weight: bold;
+}
+
+.error-solution {
+    text-align: left;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 15px;
+    border-radius: 8px;
+    margin: 15px 0;
+    max-width: 600px;
+    border-left: 4px solid #3949ab;
+}
+
+.error-solution p {
+    margin: 0 0 10px 0;
+}
+
+.error-solution ol {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.error-solution li {
+    margin: 5px 0;
+    line-height: 1.4;
+}
+
+.error-solution a {
+    color: #64b5f6;
+    text-decoration: underline;
+}
+
+.retry-btn {
+    background: #3949ab;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    margin-top: 20px;
+    transition: all 0.3s;
+    font-weight: 600;
+}
+
+.retry-btn:hover {
+    background: #303f9f;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(57, 73, 171, 0.4);
+}
+
+.threejs-container {
+    width: 100%;
+    height: 100%;
+    outline: none;
+}
+
+.threejs-container canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.panorama-instructions {
+    padding: 16px 24px;
+    background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
+    border-top: 1px solid #333;
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    color: #bbb;
+    font-size: 0.9rem;
+}
+
+.panorama-instructions p {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.debug-panel {
+    background: rgba(0, 0, 0, 0.8);
+    border-top: 1px solid #333;
+    padding: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: #0f0;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.debug-panel details {
+    cursor: pointer;
+}
+
+.debug-panel summary {
+    color: #64b5f6;
+    font-weight: bold;
+    margin-bottom: 10px;
+    outline: none;
+}
+
+.debug-panel pre {
+    margin: 10px 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 10px;
+    border-radius: 4px;
+    max-height: 150px;
+    overflow-y: auto;
+    color: #0f0;
+}
+
+.debug-btn {
+    background: #0f0;
+    color: #000;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    margin-top: 10px;
+    transition: all 0.2s;
+}
+
+.debug-btn:hover {
+    background: #0c0;
+    transform: translateY(-1px);
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .cylindrical-panorama-overlay {
+        padding: 10px;
+    }
+
+    .cylindrical-panorama-container {
+        height: 80vh;
+        border-radius: 8px;
+    }
+
+    .panorama-header {
+        padding: 16px 20px;
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+    }
+
+    .header-controls {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .panorama-instructions {
+        flex-direction: column;
+        gap: 10px;
+        padding: 12px 20px;
+    }
+
+    .panorama-instructions p {
+        justify-content: center;
+        text-align: center;
+        font-size: 0.8rem;
+    }
+
+    .error-solution {
+        font-size: 0.9rem;
+        padding: 10px;
+    }
+}
+
+/* Для очень узких экранов */
+@media (max-width: 480px) {
+    .cylindrical-panorama-container {
+        height: 75vh;
+    }
+
+    .panorama-header h3 {
+        font-size: 1.1rem;
+    }
+
+    .reset-btn, .close-btn {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+
+    .close-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 1.2rem;
+    }
+
+    .error-main {
+        font-size: 1rem;
+    }
+}
