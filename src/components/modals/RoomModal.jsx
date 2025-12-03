@@ -84,11 +84,8 @@ const RoomModal = ({ roomInfo, isOpen, onClose, onBook, loading, error }) => {
                                             onClick={handlePanoramaClick}
                                         >
                                             <span className="panorama-icon">🌐</span>
-                                            <span>3D панорама 360° (режим VR)</span>
+                                            <span>3D панорама 360°</span>
                                         </button>
-                                        <p className="panorama-hint">
-                                            Погрузитесь в виртуальный тур с эффектом присутствия
-                                        </p>
                                     </div>
                                 )}
 

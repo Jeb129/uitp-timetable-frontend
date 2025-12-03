@@ -395,10 +395,10 @@ const CylindricalPanorama = ({ imageUrl, onClose }) => {
         <div className="cylindrical-panorama-overlay" onClick={onClose}>
             <div className="cylindrical-panorama-container" onClick={(e) => e.stopPropagation()}>
                 <div className="panorama-header">
-                    <h3>Виртуальный тур 360° (3D)</h3>
+                    <h3>Виртуальный тур 360°</h3>
                     <div className="header-controls">
                         <button className="reset-btn" onClick={resetView}>
-                            🔄 Сбросить вид
+                            🔄 Перезагрузить
                         </button>
                         <button className="close-btn" onClick={onClose}>×</button>
                     </div>
@@ -416,22 +416,9 @@ const CylindricalPanorama = ({ imageUrl, onClose }) => {
                     {error && (
                         <div className="panorama-error">
                             <div className="error-icon">⚠️</div>
-                            <p className="error-main">{error}</p>
                             <div className="error-solution">
-                                <p><strong>Возможные решения:</strong></p>
-                                <ol>
-                                    <li>Обновите браузер до последней версии</li>
-                                    <li>Проверьте поддержку WebGL на <a href="https://get.webgl.org" target="_blank" rel="noopener noreferrer">get.webgl.org</a></li>
-                                    <li>Включите аппаратное ускорение в настройках браузера</li>
-                                    <li>Убедитесь, что файл панорамы существует: {getPanoramaPath()}</li>
-                                </ol>
+                                <p><strong>Панорама будет добавлена позже</strong></p>
                             </div>
-                            <button
-                                className="retry-btn"
-                                onClick={() => window.location.reload()}
-                            >
-                                Перезагрузить страницу
-                            </button>
                         </div>
                     )}
 
@@ -447,34 +434,34 @@ const CylindricalPanorama = ({ imageUrl, onClose }) => {
                 </div>
 
                 <div className="panorama-instructions">
-                    <p>🖱️ Перетаскивайте горизонтально для осмотра помещения в 3D</p>
+                    <p>🖱️ Перетаскивайте горизонтально для осмотра помещения</p>
                     <p>📱 На мобильных устройствах - двигайте пальцем горизонтально</p>
                     <p>🔄 Панорама показывает только горизонтальный обзор 360°</p>
                 </div>
 
-                {/* Отладочная информация */}
-                {process.env.NODE_ENV === 'development' && (
-                    <div className="debug-panel">
-                        <details>
-                            <summary>Отладочная информация</summary>
-                            <pre>{debugInfo}</pre>
-                            <button
-                                onClick={() => {
-                                    console.log('Отладка Three.js:', {
-                                        scene: sceneRef.current,
-                                        camera: cameraRef.current,
-                                        renderer: rendererRef.current,
-                                        mesh: meshRef.current,
-                                        mount: mountRef.current
-                                    });
-                                }}
-                                className="debug-btn"
-                            >
-                                Вывести в консоль
-                            </button>
-                        </details>
-                    </div>
-                )}
+                {/*/!* Отладочная информация *!/*/}
+                {/*{process.env.NODE_ENV === 'development' && (*/}
+                {/*    <div className="debug-panel">*/}
+                {/*        <details>*/}
+                {/*            <summary>Отладочная информация</summary>*/}
+                {/*            <pre>{debugInfo}</pre>*/}
+                {/*            <button*/}
+                {/*                onClick={() => {*/}
+                {/*                    console.log('Отладка Three.js:', {*/}
+                {/*                        scene: sceneRef.current,*/}
+                {/*                        camera: cameraRef.current,*/}
+                {/*                        renderer: rendererRef.current,*/}
+                {/*                        mesh: meshRef.current,*/}
+                {/*                        mount: mountRef.current*/}
+                {/*                    });*/}
+                {/*                }}*/}
+                {/*                className="debug-btn"*/}
+                {/*            >*/}
+                {/*                Вывести в консоль*/}
+                {/*            </button>*/}
+                {/*        </details>*/}
+                {/*    </div>*/}
+                {/*)} */}
             </div>
         </div>
     );
