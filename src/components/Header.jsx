@@ -1,5 +1,5 @@
 // src/components/Header.jsx
-import React, { useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -11,6 +11,8 @@ import RulesModal from './modals/RulesModal.jsx';
 import TimeRangeModal from './modals/TimeRangeModal.jsx';
 import './Header.css';
 
+import { getFilteredTimes } from '../utils/rulesValidator';
+
 const initialNotifications = [
     { id: 1, text: 'Аудитория 205 забронирована на 15:00', time: '10 мин назад', read: false },
     { id: 2, text: 'Новое расписание на следующую неделю', time: '1 час назад', read: false },
@@ -20,18 +22,34 @@ const initialNotifications = [
 const Header = () => {
     const location = useLocation();
     const navigate = useNavigate();
+
     const { user } = useAuth();
+    const userType = user?.role || 'guest';
+
     const isMapPage = location.pathname === '/map';
 
     const [corpus, setCorpus] = useState('Б');
     const [floor, setFloor] = useState('2');
     const [selectedTime, setSelectedTime] = useState('');
     const [seats, setSeats] = useState('');
+    const [availableTimes, setAvailableTimes] = useState([]);
 
     const [showNotifications, setShowNotifications] = useState(false);
     const [notifications, setNotifications] = useState(initialNotifications);
     const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
     const [isTimeRangeModalOpen, setIsTimeRangeModalOpen] = useState(false);
+
+    useEffect(() => {
+        if (isMapPage) {
+            const times = getFilteredTimes(userType);
+            setAvailableTimes(times);
+
+            // Если есть доступные времена и ничего не выбрано, выбираем первый
+            if (times.length > 0 && !selectedTime) {
+                setSelectedTime(times[0].value);
+            }
+        }
+    }, [userType, isMapPage, selectedTime]);
 
     const toggleNotifications = () => setShowNotifications(!showNotifications);
 
@@ -61,9 +79,32 @@ const Header = () => {
         setIsTimeRangeModalOpen(true);
     };
 
+
     const handleTimeRangeSelect = (timeRange) => {
-        setSelectedTime(timeRange);
+        // Проверяем, что выбранное время есть в списке доступных
+        const isValidTime = availableTimes.some(time => time.value === timeRange);
+        if (isValidTime) {
+            setSelectedTime(timeRange);
+        } else {
+            console.warn('Выбранное время недоступно для вашего типа пользователя');
+            // Выбираем первое доступное время
+            if (availableTimes.length > 0) {
+                setSelectedTime(availableTimes[0].value);
+            }
+        }
         setIsTimeRangeModalOpen(false);
+    };
+
+    const getTimeInfoText = () => {
+        if (availableTimes.length === 0) {
+            return userType === 'external'
+                ? 'Для внешних пользователей: 8:00-17:00 (Пн-Сб)'
+                : 'Бронирование недоступно (воскресенье)';
+        }
+
+        const firstTime = availableTimes[0];
+        const lastTime = availableTimes[availableTimes.length - 1];
+        return `Доступно: ${firstTime.start} - ${lastTime.end}`;
     };
 
     const closeTimeRangeModal = () => {
@@ -176,18 +217,31 @@ const Header = () => {
                                 </div>
                             </div>
 
-                            {/* Кнопка выбора времени */}
-                            <div className="filter-with-label">
+                            {/* Кнопка выбора времени с информацией */}
+                            <div className="filter-with-label time-filter">
                                 <label className="filter-label">Время</label>
-                                <button
-                                    className="time-range-btn"
-                                    onClick={handleTimeRangeClick}
-                                >
-                                    {selectedTime || 'Выбрать время'}
-                                </button>
+                                <div className="time-select-wrapper">
+                                    <button
+                                        className="time-range-btn"
+                                        onClick={handleTimeRangeClick}
+                                        disabled={availableTimes.length === 0}
+                                    >
+                                        {selectedTime || 'Выбрать время'}
+                                    </button>
+                                    {availableTimes.length > 0 && (
+                                        <div className="time-info-tooltip">
+                                            {getTimeInfoText()}
+                                        </div>
+                                    )}
+                                    {availableTimes.length === 0 && (
+                                        <div className="time-unavailable">
+                                            {getTimeInfoText()}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
-                            {/* Поле для количества мест - уменьшенное */}
+                            {/* Поле для количества мест */}
                             <div className="filter-with-label">
                                 <label className="filter-label">Мест</label>
                                 <input
@@ -199,6 +253,7 @@ const Header = () => {
                                     maxLength={3}
                                 />
                             </div>
+
 
                             <button className="icon-btn" onClick={handleRulesClick}>
                                 <HelpIcon />
@@ -219,6 +274,7 @@ const Header = () => {
                     onClose={closeTimeRangeModal}
                     onSelect={handleTimeRangeSelect}
                     selectedTime={selectedTime}
+                    userType={userType}
                 />
             )}
         </>
