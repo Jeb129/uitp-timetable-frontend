@@ -34,6 +34,85 @@ const MapPage = () => {
         }
     };
 
+    // Хардкод-данные для тестирования
+    const getHardcodedRoomInfo = (roomId) => {
+        const roomData = {
+            '201': {
+                id: '201',
+                name: 'Аудитория 201',
+                type: 'Лекционная',
+                capacity: 50,
+                equipment: ['Проектор', 'Экран', 'Маркерная доска', 'Wi-Fi'],
+                status: 'свободна',
+                area: '60 м²',
+                floor: '2',
+                description: 'Основная лекционная аудитория с современным оборудованием',
+                panorama: '201.jpg' // Только имя файла, без пути
+            },
+            '202': {
+                id: '202',
+                name: 'Аудитория 202',
+                type: 'Компьютерный класс',
+                capacity: 25,
+                equipment: ['Компьютеры', 'Проектор', 'Интерактивная доска'],
+                status: 'свободна',
+                area: '45 м²',
+                floor: '2',
+                description: 'Компьютерный класс для практических занятий',
+                panorama: '202.jpg' // Только имя файла, без пути
+            },
+            '203': {
+                id: '203',
+                name: 'Аудитория 203',
+                type: 'Семинарская',
+                capacity: 30,
+                equipment: ['Телевизор', 'Маркерная доска'],
+                status: 'занята',
+                area: '40 м²',
+                floor: '2',
+                description: 'Семинарская комната для групповых занятий',
+                panorama: '203.jpg' // Только имя файла, без пути
+            },
+            '301': {
+                id: '301',
+                name: 'Аудитория 301',
+                type: 'Лаборатория',
+                capacity: 20,
+                equipment: ['Специальное оборудование', 'Вытяжной шкаф'],
+                status: 'свободна',
+                area: '55 м²',
+                floor: '3',
+                description: 'Химическая лаборатория',
+                panorama: '301.jpg' // Только имя файла, без пути
+            },
+            '302': {
+                id: '302',
+                name: 'Аудитория 302',
+                type: 'Читальный зал',
+                capacity: 40,
+                equipment: ['Книжные стеллажи', 'Компьютеры', 'Принтер'],
+                status: 'свободна',
+                area: '70 м²',
+                floor: '3',
+                description: 'Читальный зал библиотеки',
+                panorama: '302.jpg' // Только имя файла, без пути
+            }
+        };
+
+        return roomData[roomId] || {
+            id: roomId,
+            name: `Аудитория ${roomId}`,
+            type: 'Учебная',
+            capacity: 35,
+            equipment: ['Проектор', 'Доска'],
+            status: 'свободна',
+            area: '50 м²',
+            floor: String(roomId).charAt(0) || '2',
+            description: 'Стандартная учебная аудитория',
+            panorama: `${roomId}.jpg` // Только имя файла, без пути
+        };
+    };
+
     // Функция для получения данных об аудитории с бэкенда
     const fetchRoomInfo = async (roomId) => {
         setLoading(true);
@@ -53,19 +132,16 @@ const MapPage = () => {
 
         } catch (err) {
             console.error('Ошибка при загрузке данных:', err);
-            setError('Не удалось загрузить информацию об аудитории');
 
-            // Показываем модалку даже при ошибке, но с сообщением об ошибке
-            setRoomInfo({
-                id: roomId,
-                name: `Аудитория ${roomId}`,
-                type: 'Неизвестно',
-                capacity: 0,
-                equipment: [],
-                status: 'неизвестно',
-                description: 'Информация временно недоступна'
-            });
+            // Используем хардкод-данные для тестирования
+            console.log('Используем хардкод-данные для аудитории:', roomId);
+            const hardcodedInfo = getHardcodedRoomInfo(roomId);
+            setRoomInfo(hardcodedInfo);
             setIsRoomModalOpen(true);
+
+            // Показываем информационное сообщение в консоли
+            console.info('Бэкенд недоступен, используются тестовые данные');
+
         } finally {
             setLoading(false);
         }
@@ -75,7 +151,7 @@ const MapPage = () => {
         console.log('Клик по аудитории:', roomId);
         setSelectedRoom(roomId);
 
-        // Запрашиваем данные с бэкенда
+        // Запрашиваем данные с бэкенда (с fallback на хардкод)
         fetchRoomInfo(roomId);
     };
 
@@ -180,7 +256,7 @@ const MapPage = () => {
                 </div>
             </div>
 
-            {/* Модальное окно с данными из бэкенда */}
+            {/* Модальное окно с данными */}
             <RoomModal
                 roomInfo={roomInfo}
                 isOpen={isRoomModalOpen}
