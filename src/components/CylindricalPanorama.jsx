@@ -32,7 +32,7 @@ const CylindricalPanorama = ({ imageUrl, onClose }) => {
             return imageUrl;
         }
         // Иначе добавляем базовый путь
-        return `/panoramas/${imageUrl}`;
+        return `../src/assets/panoramas/${imageUrl}`;
     }, [imageUrl]);
 
     // Проверка поддержки WebGL
