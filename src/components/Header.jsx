@@ -11,7 +11,8 @@ import RulesModal from './modals/RulesModal.jsx';
 import TimeRangeModal from './modals/TimeRangeModal.jsx';
 import './Header.css';
 
-import { getFilteredTimes } from '../utils/rulesValidator';
+import { getFilteredTimes } from '../utils/rulesValidation.js';
+import {useFilters} from "../contexts/FilterContext.jsx";
 
 const initialNotifications = [
     { id: 1, text: 'Аудитория 205 забронирована на 15:00', time: '10 мин назад', read: false },
@@ -22,16 +23,15 @@ const initialNotifications = [
 const Header = () => {
     const location = useLocation();
     const navigate = useNavigate();
-
     const { user } = useAuth();
-    const userType = user?.role || 'guest';
 
+    const { filters, updateFilter } = useFilters();
+
+    const userType = user?.role || 'guest';
     const isMapPage = location.pathname === '/map';
 
     const [corpus, setCorpus] = useState('Б');
-    const [floor, setFloor] = useState('2');
     const [selectedTime, setSelectedTime] = useState('');
-    const [seats, setSeats] = useState('');
     const [availableTimes, setAvailableTimes] = useState([]);
 
     const [showNotifications, setShowNotifications] = useState(false);
@@ -113,10 +113,20 @@ const Header = () => {
 
     const handleSeatsChange = (e) => {
         const value = e.target.value;
-        // Разрешаем только цифры
         if (value === '' || /^\d+$/.test(value)) {
-            setSeats(value);
+            // Обновляем глобальный фильтр
+            updateFilter('minCapacity', value === '' ? 0 : parseInt(value));
         }
+    };
+
+    // Обработчик изменения этажа
+    const handleFloorChange = (e) => {
+        updateFilter('floor', e.target.value);
+    };
+
+    // Обработчик изменения корпуса
+    const handleCorpusChange = (e) => {
+        updateFilter('corpus', e.target.value);
     };
 
     return (
@@ -181,8 +191,8 @@ const Header = () => {
                             <div className="filter-with-label">
                                 <label className="filter-label">Корпус</label>
                                 <select
-                                    value={corpus}
-                                    onChange={(e) => setCorpus(e.target.value)}
+                                    value={filters.corpus || 'Б'} // Берем из контекста
+                                    onChange={handleCorpusChange}
                                     className="corpus-select"
                                 >
                                     <option value="А">А</option>
@@ -195,8 +205,8 @@ const Header = () => {
                             <div className="filter-with-label">
                                 <label className="filter-label">Этаж</label>
                                 <select
-                                    value={floor}
-                                    onChange={(e) => setFloor(e.target.value)}
+                                    value={filters.floor || '1'} // Берем из контекста
+                                    onChange={handleFloorChange}
                                     className="floor-select"
                                 >
                                     <option value="1">1</option>
@@ -204,6 +214,22 @@ const Header = () => {
                                     <option value="3">3</option>
                                     <option value="4">4</option>
                                     <option value="5">5</option>
+                                </select>
+                            </div>
+
+                            <div className="filter-with-label">
+                                <label className="filter-label">Тип</label>
+                                <select
+                                    value={filters.roomType || 'all'}
+                                    onChange={(e) => updateFilter('roomType', e.target.value)}
+                                    className="type-select"
+                                >
+                                    <option value="all">Все</option>
+                                    <option value="lecture">Лекционная</option>
+                                    <option value="computer">Компьютерная</option>
+                                    <option value="seminar">Семинарская</option>
+                                    <option value="lab">Лаборатория</option>
+                                    <option value="reading">Читальный зал</option>
                                 </select>
                             </div>
 
@@ -247,7 +273,7 @@ const Header = () => {
                                 <input
                                     type="text"
                                     placeholder="0"
-                                    value={seats}
+                                    value={filters.minCapacity > 0 ? filters.minCapacity : ''}
                                     onChange={handleSeatsChange}
                                     className="seats-input"
                                     maxLength={3}
