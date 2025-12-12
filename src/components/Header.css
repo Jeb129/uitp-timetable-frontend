@@ -409,19 +409,25 @@
 
 .auditoriums-stats {
     display: flex;
-    gap: 12px;
     align-items: center;
+    justify-content: center;
     background: var(--bg-secondary);
     padding: 6px 12px;
     border-radius: 4px;
     border: 1px solid var(--border-primary);
     height: 32px;
+    min-width: 130px;
+    white-space: nowrap;
 }
 
 .stat-item {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: var(--text-primary);
-    white-space: nowrap;
+}
+
+.stat-item strong {
+    color: var(--accent-secondary);
+    font-weight: 600;
 }
 
 .stat-item:not(:last-child)::after {

@@ -15,12 +15,23 @@ export const FilterProvider = ({ children }) => {
         timeRange: ''
     });
 
+    const [roomStats, setRoomStats] = useState({
+        found: 0,
+        total: 0
+    });
+
     const updateFilter = (filterName, value) => {
         setFilters(prev => ({
             ...prev,
             [filterName]: value
         }));
     };
+
+    const updateStats = (found, total) => {
+        setRoomStats({ found, total });
+    };
+
+
 
     const clearFilters = () => {
         setFilters({
@@ -47,10 +58,12 @@ export const FilterProvider = ({ children }) => {
 
     const value = useMemo(() => ({
         filters,
+        roomStats,
         updateFilter,
+        updateStats,
         clearFilters,
         resetToDefaults
-    }), [filters]);
+    }), [filters, roomStats, updateStats]);
 
     return (
         <FilterContext.Provider value={value}>

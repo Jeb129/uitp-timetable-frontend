@@ -13,7 +13,6 @@ import Floor4_2D from '../assets/maps/4flor.svg';
 
 const MapPage = () => {
     const [mapMode, setMapMode] = useState('2d');
-    const [currentFloor, setCurrentFloor] = useState(1);
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
     const [roomInfo, setRoomInfo] = useState(null);
@@ -21,7 +20,13 @@ const MapPage = () => {
     const [error, setError] = useState(null);
 
     // Используем контекст фильтров
-    const { filters, updateFilter } = useFilters();
+    const { filters, updateFilter, updateStats } = useFilters();
+    const [currentFloor, setCurrentFloor] = useState(parseInt(filters.floor) || 1);
+    useEffect(() => {
+        if (filters.floor && filters.floor !== '') {
+            setCurrentFloor(parseInt(filters.floor));
+        }
+    }, [filters.floor]);
 
     const floorSVGs = {
         '2d': {
@@ -131,46 +136,23 @@ const MapPage = () => {
     const checkRoomFilters = (roomData) => {
         if (!roomData) return false;
 
-        // Фильтр по этажу (если указан)
-        if (filters.floor && filters.floor !== '' && roomData.floor !== filters.floor.toString()) {
-            return false;
-        }
-
-        // Фильтр по минимальной вместимости
-        if (roomData.capacity < filters.minCapacity) {
-            return false;
-        }
-
-        // Фильтр по типу аудитории
-        if (filters.roomType && filters.roomType !== 'all') {
-            // Сопоставляем типы фильтра с хардкодными типами
-            const typeMapping = {
-                'lecture': 'Лекционная',
-                'computer': 'Компьютерный класс',
-                'seminar': 'Семинарская',
-                'lab': 'Лаборатория',
-                'reading': 'Читальный зал',
-                'auditorium': 'Актовый зал'
-            };
-
-            const expectedType = typeMapping[filters.roomType];
-            if (expectedType && roomData.type !== expectedType) {
-                return false;
-            }
-        }
-
-        // Фильтр по статусу
+        // Этаж
+        if (filters.floor && filters.floor !== '' && roomData.floor !== filters.floor.toString()) return false;
+        // Вместимость
+        if (roomData.capacity < filters.minCapacity) return false;
+        // Статус
         if (filters.status && filters.status !== 'all') {
-            const statusMapping = {
-                'free': 'свободна',
-                'busy': 'занята'
-            };
-
-            if (roomData.status !== statusMapping[filters.status]) {
-                return false;
-            }
+            const statusMap = { 'free': 'свободна', 'busy': 'занята' };
+            if (roomData.status !== statusMap[filters.status]) return false;
         }
-
+        // Тип
+        if (filters.roomType && filters.roomType !== 'all') {
+            const typeMap = {
+                'lecture': 'Лекционная', 'computer': 'Компьютерный класс',
+                'seminar': 'Семинарская', 'lab': 'Лаборатория', 'reading': 'Читальный зал'
+            };
+            if (roomData.type !== typeMap[filters.roomType]) return false;
+        }
         return true;
     };
 
@@ -184,16 +166,27 @@ const MapPage = () => {
                 filteredIds.push(roomId);
             }
         });
-
         return filteredIds;
-    }, [filters]); // Пересчитываем при изменении фильтров
+    }, [filters]);
 
     // Синхронизируем этаж карты с фильтром этажа
     useEffect(() => {
-        if (filters.floor && filters.floor !== '') {
-            setCurrentFloor(parseInt(filters.floor));
-        }
-    }, [filters.floor]);
+        const allRooms = getAllRoomsData();
+        const roomsArray = Object.values(allRooms);
+
+        // 1. Считаем общее количество комнат НА ТЕКУЩЕМ ЭТАЖЕ
+        // Используем currentFloor или filters.floor
+        const targetFloor = filters.floor ? filters.floor.toString() : '1';
+        const totalOnFloor = roomsArray.filter(r => r.floor === targetFloor).length;
+
+        // 2. Считаем сколько найдено (это длина filteredIds)
+        // Но getFilteredRooms уже содержит только те, что прошли ВСЕ фильтры (включая этаж)
+        const foundCount = getFilteredRooms.length;
+
+        // 3. Обновляем контекст
+        updateStats(foundCount, totalOnFloor);
+
+    }, [getFilteredRooms, filters.floor]);
 
     // Обновляем фильтр этажа при изменении этажа в карте
     const handleFloorChange = (floor) => {

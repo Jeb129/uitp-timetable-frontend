@@ -25,7 +25,7 @@ const Header = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
 
-    const { filters, updateFilter } = useFilters();
+    const { filters, updateFilter, roomStats } = useFilters();
 
     const userType = user?.role || 'guest';
     const isMapPage = location.pathname === '/map';
@@ -235,11 +235,11 @@ const Header = () => {
 
                             {/* Доступные аудитории с общим лейблом */}
                             <div className="auditoriums-section">
-                                <label className="auditoriums-label">Доступные аудитории</label>
-                                <div className="auditoriums-stats">
-                                    <span className="stat-item">Акт залы: 0</span>
-                                    <span className="stat-item">Лекционные: 2</span>
-                                    <span className="stat-item">Учебные: 5</span>
+                                <label className="auditoriums-label">Аудитории</label>
+                                <div className="auditoriums-stats single-stat">
+                <span className="stat-item">
+                    Найдено: <strong>{roomStats.found}</strong> из {roomStats.total}
+                </span>
                                 </div>
                             </div>
 
