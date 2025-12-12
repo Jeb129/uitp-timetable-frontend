@@ -13,6 +13,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import RulesPage from './pages/RulesPage';
 import AdminPage from "./pages/AdminPage.jsx";
+import { FilterProvider } from './contexts/FilterContext';
 
 
 // Компонент, который проверяет авторизацию - ОТКЛЮЧЕН
@@ -58,9 +59,11 @@ const AppContent = () => {
                 </AppLayout>
             } />
             <Route path="/map" element={
-                <AppLayout>
-                    <MapPage />
-                </AppLayout>
+                <FilterProvider>
+                    <AppLayout>
+                        <MapPage />
+                    </AppLayout>
+                </FilterProvider>
             } />
             <Route path="/auditoriums" element={
                 <AppLayout>

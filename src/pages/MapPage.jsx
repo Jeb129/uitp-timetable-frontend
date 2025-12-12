@@ -1,7 +1,8 @@
 // src/pages/MapPage.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import InteractiveSVG from '../components/InteractiveSVG';
 import RoomModal from '../components/modals/RoomModal';
+import { useFilters } from '../contexts/FilterContext';
 import './MapPage.css';
 
 // Импортируем SVG файлы
@@ -12,12 +13,20 @@ import Floor4_2D from '../assets/maps/4flor.svg';
 
 const MapPage = () => {
     const [mapMode, setMapMode] = useState('2d');
-    const [currentFloor, setCurrentFloor] = useState(1);
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
     const [roomInfo, setRoomInfo] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+
+    // Используем контекст фильтров
+    const { filters, updateFilter, updateStats } = useFilters();
+    const [currentFloor, setCurrentFloor] = useState(parseInt(filters.floor) || 1);
+    useEffect(() => {
+        if (filters.floor && filters.floor !== '') {
+            setCurrentFloor(parseInt(filters.floor));
+        }
+    }, [filters.floor]);
 
     const floorSVGs = {
         '2d': {
@@ -47,7 +56,7 @@ const MapPage = () => {
                 area: '60 м²',
                 floor: '2',
                 description: 'Основная лекционная аудитория с современным оборудованием',
-                panorama: '201.jpg' // Только имя файла, без пути
+                panorama: '201.jpg'
             },
             '202': {
                 id: '202',
@@ -59,7 +68,7 @@ const MapPage = () => {
                 area: '45 м²',
                 floor: '2',
                 description: 'Компьютерный класс для практических занятий',
-                panorama: '202.jpg' // Только имя файла, без пути
+                panorama: '202.jpg'
             },
             '203': {
                 id: '203',
@@ -71,7 +80,7 @@ const MapPage = () => {
                 area: '40 м²',
                 floor: '2',
                 description: 'Семинарская комната для групповых занятий',
-                panorama: '203.jpg' // Только имя файла, без пути
+                panorama: '203.jpg'
             },
             '301': {
                 id: '301',
@@ -83,7 +92,7 @@ const MapPage = () => {
                 area: '55 м²',
                 floor: '3',
                 description: 'Химическая лаборатория',
-                panorama: '301.jpg' // Только имя файла, без пути
+                panorama: '301.jpg'
             },
             '302': {
                 id: '302',
@@ -95,7 +104,7 @@ const MapPage = () => {
                 area: '70 м²',
                 floor: '3',
                 description: 'Читальный зал библиотеки',
-                panorama: '302.jpg' // Только имя файла, без пути
+                panorama: '302.jpg'
             }
         };
 
@@ -109,39 +118,105 @@ const MapPage = () => {
             area: '50 м²',
             floor: String(roomId).charAt(0) || '2',
             description: 'Стандартная учебная аудитория',
-            panorama: `${roomId}.jpg` // Только имя файла, без пути
+            panorama: `${roomId}.jpg`
         };
     };
 
-    // Функция для получения данных об аудитории с бэкенда
+    // Функция для получения всех аудиторий
+    const getAllRoomsData = () => {
+        const roomIds = ['201', '202', '203', '301', '302'];
+        const rooms = {};
+        roomIds.forEach(id => {
+            rooms[id] = getHardcodedRoomInfo(id);
+        });
+        return rooms;
+    };
+
+    // Функция проверки, проходит ли аудитория фильтры
+    const checkRoomFilters = (roomData) => {
+        if (!roomData) return false;
+
+        // Этаж
+        if (filters.floor && filters.floor !== '' && roomData.floor !== filters.floor.toString()) return false;
+        // Вместимость
+        if (roomData.capacity < filters.minCapacity) return false;
+        // Статус
+        if (filters.status && filters.status !== 'all') {
+            const statusMap = { 'free': 'свободна', 'busy': 'занята' };
+            if (roomData.status !== statusMap[filters.status]) return false;
+        }
+        // Тип
+        if (filters.roomType && filters.roomType !== 'all') {
+            const typeMap = {
+                'lecture': 'Лекционная', 'computer': 'Компьютерный класс',
+                'seminar': 'Семинарская', 'lab': 'Лаборатория', 'reading': 'Читальный зал'
+            };
+            if (roomData.type !== typeMap[filters.roomType]) return false;
+        }
+        return true;
+    };
+
+    // Получаем отфильтрованные аудитории
+    const getFilteredRooms = useMemo(() => {
+        const allRooms = getAllRoomsData();
+        const filteredIds = [];
+
+        Object.keys(allRooms).forEach(roomId => {
+            if (checkRoomFilters(allRooms[roomId])) {
+                filteredIds.push(roomId);
+            }
+        });
+        return filteredIds;
+    }, [filters]);
+
+    // Синхронизируем этаж карты с фильтром этажа
+    useEffect(() => {
+        const allRooms = getAllRoomsData();
+        const roomsArray = Object.values(allRooms);
+
+        // 1. Считаем общее количество комнат НА ТЕКУЩЕМ ЭТАЖЕ
+        // Используем currentFloor или filters.floor
+        const targetFloor = filters.floor ? filters.floor.toString() : '1';
+        const totalOnFloor = roomsArray.filter(r => r.floor === targetFloor).length;
+
+        // 2. Считаем сколько найдено (это длина filteredIds)
+        // Но getFilteredRooms уже содержит только те, что прошли ВСЕ фильтры (включая этаж)
+        const foundCount = getFilteredRooms.length;
+
+        // 3. Обновляем контекст
+        updateStats(foundCount, totalOnFloor);
+
+    }, [getFilteredRooms, filters.floor]);
+
+    // Обновляем фильтр этажа при изменении этажа в карте
+    const handleFloorChange = (floor) => {
+        setCurrentFloor(floor);
+        updateFilter('floor', floor.toString());
+    };
+
+    // Функция для получения данных об аудитории
     const fetchRoomInfo = async (roomId) => {
         setLoading(true);
         setError(null);
 
         try {
-            // Запрос к вашему бэкенду
+            // Пытаемся получить с бэкенда
             const response = await fetch(`/api/rooms/${roomId}`);
-
-            if (!response.ok) {
-                throw new Error(`Ошибка: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`Ошибка: ${response.status}`);
 
             const data = await response.json();
             setRoomInfo(data);
             setIsRoomModalOpen(true);
-
         } catch (err) {
             console.error('Ошибка при загрузке данных:', err);
 
-            // Используем хардкод-данные для тестирования
+            // Используем хардкод-данные
             console.log('Используем хардкод-данные для аудитории:', roomId);
             const hardcodedInfo = getHardcodedRoomInfo(roomId);
             setRoomInfo(hardcodedInfo);
             setIsRoomModalOpen(true);
 
-            // Показываем информационное сообщение в консоли
             console.info('Бэкенд недоступен, используются тестовые данные');
-
         } finally {
             setLoading(false);
         }
@@ -150,21 +225,15 @@ const MapPage = () => {
     const handleRoomClick = (roomId) => {
         console.log('Клик по аудитории:', roomId);
         setSelectedRoom(roomId);
-
-        // Запрашиваем данные с бэкенда (с fallback на хардкод)
         fetchRoomInfo(roomId);
     };
 
     const handleBookRoom = async (roomId) => {
         try {
             setLoading(true);
-
-            // Запрос на бронирование
             const response = await fetch('/api/bookings', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     roomId: roomId,
                     date: new Date().toISOString().split('T')[0],
@@ -173,7 +242,6 @@ const MapPage = () => {
             });
 
             if (response.ok) {
-                const result = await response.json();
                 alert(`Аудитория ${roomId} успешно забронирована!`);
                 handleCloseModal();
             } else {
@@ -195,6 +263,15 @@ const MapPage = () => {
     };
 
     const currentSVG = floorSVGs[mapMode][currentFloor];
+
+    // Функция сброса всех фильтров
+    const handleResetFilters = () => {
+        updateFilter('floor', '');
+        updateFilter('minCapacity', 0);
+        updateFilter('roomType', 'all');
+        updateFilter('status', 'all');
+        setCurrentFloor(1);
+    };
 
     return (
         <div className="map-page">
@@ -224,12 +301,73 @@ const MapPage = () => {
                             <button
                                 key={floor}
                                 className={`floor-btn ${currentFloor === floor ? 'active' : ''}`}
-                                onClick={() => setCurrentFloor(floor)}
+                                onClick={() => handleFloorChange(floor)}
                             >
                                 {floor}
                             </button>
                         ))}
                     </div>
+                </div>
+
+                {/* Быстрые фильтры */}
+                <div className="quick-filters">
+                    <h3>Быстрые фильтры:</h3>
+                    <div className="quick-filter-buttons">
+                        <button
+                            className={`quick-filter-btn ${filters.roomType === 'lecture' ? 'active' : ''}`}
+                            onClick={() => updateFilter('roomType', filters.roomType === 'lecture' ? 'all' : 'lecture')}
+                        >
+                            Лекционные
+                        </button>
+                        <button
+                            className={`quick-filter-btn ${filters.roomType === 'computer' ? 'active' : ''}`}
+                            onClick={() => updateFilter('roomType', filters.roomType === 'computer' ? 'all' : 'computer')}
+                        >
+                            Компьютерные
+                        </button>
+                        <button
+                            className={`quick-filter-btn ${filters.status === 'free' ? 'active' : ''}`}
+                            onClick={() => updateFilter('status', filters.status === 'free' ? 'all' : 'free')}
+                        >
+                            Только свободные
+                        </button>
+                        <button
+                            className={`quick-filter-btn ${filters.minCapacity === 30 ? 'active' : ''}`}
+                            onClick={() => updateFilter('minCapacity', filters.minCapacity === 30 ? 0 : 30)}
+                        >
+                            От 30 мест
+                        </button>
+                    </div>
+                </div>
+
+                {/* Статистика фильтрации */}
+                <div className="filter-stats">
+                    <div className="stats-badge">
+                        <span className="stats-text">
+                            Показано: <strong>{getFilteredRooms.length}</strong> из 5 аудиторий
+                        </span>
+                        {(filters.floor && filters.floor !== '') && (
+                            <span className="stats-info"> | Этаж: {filters.floor}</span>
+                        )}
+                        {filters.minCapacity > 0 && (
+                            <span className="stats-info"> | От {filters.minCapacity} мест</span>
+                        )}
+                        {filters.roomType !== 'all' && (
+                            <span className="stats-info"> | Тип: {filters.roomType}</span>
+                        )}
+                        {filters.status !== 'all' && (
+                            <span className="stats-info"> | Статус: {filters.status}</span>
+                        )}
+                    </div>
+                    {(filters.floor || filters.minCapacity > 0 || filters.roomType !== 'all' || filters.status !== 'all') && (
+                        <button
+                            className="reset-filters-btn"
+                            onClick={handleResetFilters}
+                            title="Сбросить все фильтры"
+                        >
+                            Сбросить фильтры
+                        </button>
+                    )}
                 </div>
 
                 <div className="map-status">
@@ -247,10 +385,33 @@ const MapPage = () => {
                         svgUrl={currentSVG}
                         onRoomClick={handleRoomClick}
                         selectedRoom={selectedRoom}
+                        filteredRooms={getFilteredRooms} // Передаем отфильтрованные аудитории
+                        currentFloor={currentFloor}
                     />
                     {loading && (
                         <div className="loading-overlay">
                             <div className="loading-spinner">Загрузка информации...</div>
+                        </div>
+                    )}
+
+                    {/* Подсказка по фильтрации */}
+                    {getFilteredRooms.length === 0 && (
+                        <div className="no-rooms-message">
+                            <div className="no-rooms-content">
+                                <h3>Аудитории не найдены</h3>
+                                <p>Попробуйте изменить параметры фильтрации:</p>
+                                <ul>
+                                    <li>Выберите другой этаж</li>
+                                    <li>Уменьшите количество мест</li>
+                                    <li>Сбросьте фильтр по типу или статусу</li>
+                                </ul>
+                                <button
+                                    className="reset-filters-btn-large"
+                                    onClick={handleResetFilters}
+                                >
+                                    Сбросить все фильтры
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>
