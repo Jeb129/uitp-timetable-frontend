@@ -1,7 +1,7 @@
-/* src/components/InteractiveSVG.css */
 .interactive-svg-container {
     width: 100%;
     height: 100%;
+    position: relative;
 }
 
 .interactive-svg-container svg {
@@ -19,9 +19,8 @@
     color: #666;
 }
 
-/* Стили для интерактивных rect */
+/* Базовый стиль для интерактивных элементов */
 .interactive-rect {
-    cursor: pointer;
     transition: all 0.3s ease;
     stroke: transparent;
     stroke-width: 1px;
@@ -33,16 +32,47 @@
     stroke-width: 4px;
 }
 
-/* Эффект для выбранного rect */
-.interactive-rect.rect-selected {
-    filter: brightness(1.1);
-    stroke: #1565c0;
-    stroke-width: 3px;
-    animation: pulse 1.5s infinite;
+.filtered-in, .filtered-in * {
+    fill: #4CAF50 !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
 }
 
-@keyframes pulse {
-    0% { stroke-width: 3px; }
-    50% { stroke-width: 5px; }
-    100% { stroke-width: 3px; }
+.filtered-out,
+.filtered-out * {
+    fill: #BDBDBD !important;
+    opacity: 0.3 !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
 }
+
+.interactive-rect.rect-selected,
+.interactive-rect.rect-selected * {
+    fill: #2196F3 !important;
+    opacity: 1 !important;
+    z-index: 100;
+    stroke: #0D47A1 !important;
+    stroke-width: 2px !important;
+}
+
+
+.interactive-rect.filtered-in:hover,
+.interactive-rect.filtered-in:hover * {
+    fill: #66BB6A !important;
+    filter: brightness(1.1);
+}
+
+.interactive-rect[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    pointer-events: none;
+    transform: translateY(-20px); /* Чуть выше курсора */
+}
+

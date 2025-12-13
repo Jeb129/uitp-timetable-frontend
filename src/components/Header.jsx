@@ -1,5 +1,5 @@
 // src/components/Header.jsx
-import React, { useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -11,6 +11,9 @@ import RulesModal from './modals/RulesModal.jsx';
 import TimeRangeModal from './modals/TimeRangeModal.jsx';
 import './Header.css';
 
+import { getFilteredTimes } from '../utils/rulesValidation.js';
+import {useFilters} from "../contexts/FilterContext.jsx";
+
 const initialNotifications = [
     { id: 1, text: 'Аудитория 205 забронирована на 15:00', time: '10 мин назад', read: false },
     { id: 2, text: 'Новое расписание на следующую неделю', time: '1 час назад', read: false },
@@ -21,17 +24,32 @@ const Header = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { user } = useAuth();
+
+    const { filters, updateFilter, roomStats } = useFilters();
+
+    const userType = user?.role || 'guest';
     const isMapPage = location.pathname === '/map';
 
     const [corpus, setCorpus] = useState('Б');
-    const [floor, setFloor] = useState('2');
     const [selectedTime, setSelectedTime] = useState('');
-    const [seats, setSeats] = useState('');
+    const [availableTimes, setAvailableTimes] = useState([]);
 
     const [showNotifications, setShowNotifications] = useState(false);
     const [notifications, setNotifications] = useState(initialNotifications);
     const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
     const [isTimeRangeModalOpen, setIsTimeRangeModalOpen] = useState(false);
+
+    useEffect(() => {
+        if (isMapPage) {
+            const times = getFilteredTimes(userType);
+            setAvailableTimes(times);
+
+            // Если есть доступные времена и ничего не выбрано, выбираем первый
+            if (times.length > 0 && !selectedTime) {
+                setSelectedTime(times[0].value);
+            }
+        }
+    }, [userType, isMapPage, selectedTime]);
 
     const toggleNotifications = () => setShowNotifications(!showNotifications);
 
@@ -61,9 +79,32 @@ const Header = () => {
         setIsTimeRangeModalOpen(true);
     };
 
+
     const handleTimeRangeSelect = (timeRange) => {
-        setSelectedTime(timeRange);
+        // Проверяем, что выбранное время есть в списке доступных
+        const isValidTime = availableTimes.some(time => time.value === timeRange);
+        if (isValidTime) {
+            setSelectedTime(timeRange);
+        } else {
+            console.warn('Выбранное время недоступно для вашего типа пользователя');
+            // Выбираем первое доступное время
+            if (availableTimes.length > 0) {
+                setSelectedTime(availableTimes[0].value);
+            }
+        }
         setIsTimeRangeModalOpen(false);
+    };
+
+    const getTimeInfoText = () => {
+        if (availableTimes.length === 0) {
+            return userType === 'external'
+                ? 'Для внешних пользователей: 8:00-17:00 (Пн-Сб)'
+                : 'Бронирование недоступно (воскресенье)';
+        }
+
+        const firstTime = availableTimes[0];
+        const lastTime = availableTimes[availableTimes.length - 1];
+        return `Доступно: ${firstTime.start} - ${lastTime.end}`;
     };
 
     const closeTimeRangeModal = () => {
@@ -72,10 +113,20 @@ const Header = () => {
 
     const handleSeatsChange = (e) => {
         const value = e.target.value;
-        // Разрешаем только цифры
         if (value === '' || /^\d+$/.test(value)) {
-            setSeats(value);
+            // Обновляем глобальный фильтр
+            updateFilter('minCapacity', value === '' ? 0 : parseInt(value));
         }
+    };
+
+    // Обработчик изменения этажа
+    const handleFloorChange = (e) => {
+        updateFilter('floor', e.target.value);
+    };
+
+    // Обработчик изменения корпуса
+    const handleCorpusChange = (e) => {
+        updateFilter('corpus', e.target.value);
     };
 
     return (
@@ -140,8 +191,8 @@ const Header = () => {
                             <div className="filter-with-label">
                                 <label className="filter-label">Корпус</label>
                                 <select
-                                    value={corpus}
-                                    onChange={(e) => setCorpus(e.target.value)}
+                                    value={filters.corpus || 'Б'} // Берем из контекста
+                                    onChange={handleCorpusChange}
                                     className="corpus-select"
                                 >
                                     <option value="А">А</option>
@@ -154,8 +205,8 @@ const Header = () => {
                             <div className="filter-with-label">
                                 <label className="filter-label">Этаж</label>
                                 <select
-                                    value={floor}
-                                    onChange={(e) => setFloor(e.target.value)}
+                                    value={filters.floor || '1'} // Берем из контекста
+                                    onChange={handleFloorChange}
                                     className="floor-select"
                                 >
                                     <option value="1">1</option>
@@ -166,39 +217,69 @@ const Header = () => {
                                 </select>
                             </div>
 
+                            <div className="filter-with-label">
+                                <label className="filter-label">Тип</label>
+                                <select
+                                    value={filters.roomType || 'all'}
+                                    onChange={(e) => updateFilter('roomType', e.target.value)}
+                                    className="type-select"
+                                >
+                                    <option value="all">Все</option>
+                                    <option value="lecture">Лекционная</option>
+                                    <option value="computer">Компьютерная</option>
+                                    <option value="seminar">Семинарская</option>
+                                    <option value="lab">Лаборатория</option>
+                                    <option value="reading">Читальный зал</option>
+                                </select>
+                            </div>
+
                             {/* Доступные аудитории с общим лейблом */}
                             <div className="auditoriums-section">
-                                <label className="auditoriums-label">Доступные аудитории</label>
-                                <div className="auditoriums-stats">
-                                    <span className="stat-item">Акт залы: 0</span>
-                                    <span className="stat-item">Лекционные: 2</span>
-                                    <span className="stat-item">Учебные: 5</span>
+                                <label className="auditoriums-label">Аудитории</label>
+                                <div className="auditoriums-stats single-stat">
+                <span className="stat-item">
+                    Найдено: <strong>{roomStats.found}</strong> из {roomStats.total}
+                </span>
                                 </div>
                             </div>
 
-                            {/* Кнопка выбора времени */}
-                            <div className="filter-with-label">
+                            {/* Кнопка выбора времени с информацией */}
+                            <div className="filter-with-label time-filter">
                                 <label className="filter-label">Время</label>
-                                <button
-                                    className="time-range-btn"
-                                    onClick={handleTimeRangeClick}
-                                >
-                                    {selectedTime || 'Выбрать время'}
-                                </button>
+                                <div className="time-select-wrapper">
+                                    <button
+                                        className="time-range-btn"
+                                        onClick={handleTimeRangeClick}
+                                        disabled={availableTimes.length === 0}
+                                    >
+                                        {selectedTime || 'Выбрать время'}
+                                    </button>
+                                    {availableTimes.length > 0 && (
+                                        <div className="time-info-tooltip">
+                                            {getTimeInfoText()}
+                                        </div>
+                                    )}
+                                    {availableTimes.length === 0 && (
+                                        <div className="time-unavailable">
+                                            {getTimeInfoText()}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
-                            {/* Поле для количества мест - уменьшенное */}
+                            {/* Поле для количества мест */}
                             <div className="filter-with-label">
                                 <label className="filter-label">Мест</label>
                                 <input
                                     type="text"
                                     placeholder="0"
-                                    value={seats}
+                                    value={filters.minCapacity > 0 ? filters.minCapacity : ''}
                                     onChange={handleSeatsChange}
                                     className="seats-input"
                                     maxLength={3}
                                 />
                             </div>
+
 
                             <button className="icon-btn" onClick={handleRulesClick}>
                                 <HelpIcon />
@@ -219,6 +300,7 @@ const Header = () => {
                     onClose={closeTimeRangeModal}
                     onSelect={handleTimeRangeSelect}
                     selectedTime={selectedTime}
+                    userType={userType}
                 />
             )}
         </>

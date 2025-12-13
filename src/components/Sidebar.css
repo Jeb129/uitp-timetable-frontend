@@ -69,6 +69,7 @@
     line-height: 1.1;
     max-width: 70px;
     word-wrap: break-word;
+    color: var(--text-primary);
 }
 
 /* Специальные стили для длинных названий */
