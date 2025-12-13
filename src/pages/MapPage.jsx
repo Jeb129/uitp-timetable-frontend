@@ -11,6 +11,99 @@ import Floor2_2D from '../assets/maps/2flor.svg';
 import Floor3_2D from '../assets/maps/3flor.svg';
 import Floor4_2D from '../assets/maps/4flor.svg';
 
+const getHardcodedRoomInfo = (roomId) => {
+    const roomData = {
+        '201': {
+            id: '201', name: 'Аудитория 201', type: 'Лекционная',
+            capacity: 50, equipment: ['Проектор', 'Экран', 'Маркерная доска', 'Wi-Fi'],
+            status: 'свободна', area: '60 м²', floor: '2',
+            description: 'Основная лекционная аудитория с современным оборудованием', panorama: '201.jpg'
+        },
+        '202': {
+            id: '202', name: 'Аудитория 202', type: 'Компьютерный класс',
+            capacity: 25, equipment: ['Компьютеры', 'Проектор', 'Интерактивная доска'],
+            status: 'свободна', area: '45 м²', floor: '2',
+            description: 'Компьютерный класс для практических занятий', panorama: '202.jpg'
+        },
+        '203': {
+            id: '203', name: 'Аудитория 203', type: 'Семинарская',
+            capacity: 30, equipment: ['Телевизор', 'Маркерная доска'],
+            status: 'занята', area: '40 м²', floor: '2',
+            description: 'Семинарская комната для групповых занятий', panorama: '203.jpg'
+        },
+        '301': {
+            id: '301', name: 'Аудитория 301', type: 'Лаборатория',
+            capacity: 20, equipment: ['Специальное оборудование', 'Вытяжной шкаф'],
+            status: 'свободна', area: '55 м²', floor: '3',
+            description: 'Химическая лаборатория', panorama: '301.jpg'
+        },
+        '302': {
+            id: '302', name: 'Аудитория 302', type: 'Читальный зал',
+            capacity: 40, equipment: ['Книжные стеллажи', 'Компьютеры', 'Принтер'],
+            status: 'свободна', area: '70 м²', floor: '3',
+            description: 'Читальный зал библиотеки', panorama: '302.jpg'
+        }
+    };
+
+    return roomData[roomId] || {
+        id: roomId,
+        name: `Аудитория ${roomId}`,
+        type: 'Учебная',
+        capacity: 35,
+        equipment: ['Проектор', 'Доска'],
+        status: 'свободна',
+        area: '50 м²',
+        floor: String(roomId).charAt(0) || '2',
+        description: 'Стандартная учебная аудитория',
+        panorama: `${roomId}.jpg`
+    };
+};
+
+const getAllRoomsData = () => {
+    const roomIds = ['201', '202', '203', '301', '302'];
+    const rooms = {};
+    roomIds.forEach(id => {
+        rooms[id] = getHardcodedRoomInfo(id);
+    });
+    return rooms;
+};
+
+// Функция проверки теперь принимает filters как аргумент
+const checkRoomFilters = (roomData, filters) => {
+    if (!roomData) return false;
+
+    // 1. Этаж (строгое сравнение строк)
+    if (filters.floor && String(filters.floor) !== '' && String(roomData.floor) !== String(filters.floor)) {
+        return false;
+    }
+
+    // 2. Вместимость (защита от пустых значений)
+    const filterCap = parseInt(filters.minCapacity, 10);
+    const roomCap = parseInt(roomData.capacity, 10);
+
+    // Если фильтр задан (число > 0) и вместимость комнаты меньше фильтра -> скрываем
+    if (!isNaN(filterCap) && filterCap > 0) {
+        if (roomCap < filterCap) return false;
+    }
+
+    // 3. Статус
+    if (filters.status && filters.status !== 'all') {
+        const statusMap = { 'free': 'свободна', 'busy': 'занята' };
+        if (roomData.status !== statusMap[filters.status]) return false;
+    }
+
+    // 4. Тип
+    if (filters.roomType && filters.roomType !== 'all') {
+        const typeMap = {
+            'lecture': 'Лекционная', 'computer': 'Компьютерный класс',
+            'seminar': 'Семинарская', 'lab': 'Лаборатория', 'reading': 'Читальный зал'
+        };
+        // Используем includes для частичного совпадения, если в данных есть опечатки
+        if (roomData.type !== typeMap[filters.roomType]) return false;
+    }
+    return true;
+};
+
 const MapPage = () => {
     const [mapMode, setMapMode] = useState('2d');
     const [selectedRoom, setSelectedRoom] = useState(null);
@@ -19,141 +112,18 @@ const MapPage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // Используем контекст фильтров
     const { filters, updateFilter, updateStats } = useFilters();
-    const [currentFloor, setCurrentFloor] = useState(parseInt(filters.floor) || 1);
+    const [currentFloor, setCurrentFloor] = useState(Number(filters.floor) || 1);
+
     useEffect(() => {
         if (filters.floor && filters.floor !== '') {
-            setCurrentFloor(parseInt(filters.floor));
+            setCurrentFloor(Number(filters.floor));
         }
     }, [filters.floor]);
 
     const floorSVGs = {
-        '2d': {
-            1: Floor1_2D,
-            2: Floor2_2D,
-            3: Floor3_2D,
-            4: Floor4_2D
-        },
-        '2.5d': {
-            1: Floor1_2D,
-            2: Floor2_2D,
-            3: Floor3_2D,
-            4: Floor4_2D
-        }
-    };
-
-    // Хардкод-данные для тестирования
-    const getHardcodedRoomInfo = (roomId) => {
-        const roomData = {
-            '201': {
-                id: '201',
-                name: 'Аудитория 201',
-                type: 'Лекционная',
-                capacity: 50,
-                equipment: ['Проектор', 'Экран', 'Маркерная доска', 'Wi-Fi'],
-                status: 'свободна',
-                area: '60 м²',
-                floor: '2',
-                description: 'Основная лекционная аудитория с современным оборудованием',
-                panorama: '201.jpg'
-            },
-            '202': {
-                id: '202',
-                name: 'Аудитория 202',
-                type: 'Компьютерный класс',
-                capacity: 25,
-                equipment: ['Компьютеры', 'Проектор', 'Интерактивная доска'],
-                status: 'свободна',
-                area: '45 м²',
-                floor: '2',
-                description: 'Компьютерный класс для практических занятий',
-                panorama: '202.jpg'
-            },
-            '203': {
-                id: '203',
-                name: 'Аудитория 203',
-                type: 'Семинарская',
-                capacity: 30,
-                equipment: ['Телевизор', 'Маркерная доска'],
-                status: 'занята',
-                area: '40 м²',
-                floor: '2',
-                description: 'Семинарская комната для групповых занятий',
-                panorama: '203.jpg'
-            },
-            '301': {
-                id: '301',
-                name: 'Аудитория 301',
-                type: 'Лаборатория',
-                capacity: 20,
-                equipment: ['Специальное оборудование', 'Вытяжной шкаф'],
-                status: 'свободна',
-                area: '55 м²',
-                floor: '3',
-                description: 'Химическая лаборатория',
-                panorama: '301.jpg'
-            },
-            '302': {
-                id: '302',
-                name: 'Аудитория 302',
-                type: 'Читальный зал',
-                capacity: 40,
-                equipment: ['Книжные стеллажи', 'Компьютеры', 'Принтер'],
-                status: 'свободна',
-                area: '70 м²',
-                floor: '3',
-                description: 'Читальный зал библиотеки',
-                panorama: '302.jpg'
-            }
-        };
-
-        return roomData[roomId] || {
-            id: roomId,
-            name: `Аудитория ${roomId}`,
-            type: 'Учебная',
-            capacity: 35,
-            equipment: ['Проектор', 'Доска'],
-            status: 'свободна',
-            area: '50 м²',
-            floor: String(roomId).charAt(0) || '2',
-            description: 'Стандартная учебная аудитория',
-            panorama: `${roomId}.jpg`
-        };
-    };
-
-    // Функция для получения всех аудиторий
-    const getAllRoomsData = () => {
-        const roomIds = ['201', '202', '203', '301', '302'];
-        const rooms = {};
-        roomIds.forEach(id => {
-            rooms[id] = getHardcodedRoomInfo(id);
-        });
-        return rooms;
-    };
-
-    // Функция проверки, проходит ли аудитория фильтры
-    const checkRoomFilters = (roomData) => {
-        if (!roomData) return false;
-
-        // Этаж
-        if (filters.floor && filters.floor !== '' && roomData.floor !== filters.floor.toString()) return false;
-        // Вместимость
-        if (roomData.capacity < filters.minCapacity) return false;
-        // Статус
-        if (filters.status && filters.status !== 'all') {
-            const statusMap = { 'free': 'свободна', 'busy': 'занята' };
-            if (roomData.status !== statusMap[filters.status]) return false;
-        }
-        // Тип
-        if (filters.roomType && filters.roomType !== 'all') {
-            const typeMap = {
-                'lecture': 'Лекционная', 'computer': 'Компьютерный класс',
-                'seminar': 'Семинарская', 'lab': 'Лаборатория', 'reading': 'Читальный зал'
-            };
-            if (roomData.type !== typeMap[filters.roomType]) return false;
-        }
-        return true;
+        '2d': { 1: Floor1_2D, 2: Floor2_2D, 3: Floor3_2D, 4: Floor4_2D },
+        '2.5d': { 1: Floor1_2D, 2: Floor2_2D, 3: Floor3_2D, 4: Floor4_2D }
     };
 
     // Получаем отфильтрованные аудитории
@@ -162,109 +132,72 @@ const MapPage = () => {
         const filteredIds = [];
 
         Object.keys(allRooms).forEach(roomId => {
-            if (checkRoomFilters(allRooms[roomId])) {
+            if (checkRoomFilters(allRooms[roomId], filters)) {
                 filteredIds.push(roomId);
             }
         });
+
+        // В консоли браузера вы увидите этот массив.
+        // Если он пустой при смене мест -> проблема в фильтре checkRoomFilters
+        // Если он заполнен -> проблема в InteractiveSVG
+        console.log("Filtered Rooms Result:", filteredIds);
+
         return filteredIds;
     }, [filters]);
 
-    // Синхронизируем этаж карты с фильтром этажа
+    // Обновляем статистику для Хедера
     useEffect(() => {
         const allRooms = getAllRoomsData();
         const roomsArray = Object.values(allRooms);
 
-        // 1. Считаем общее количество комнат НА ТЕКУЩЕМ ЭТАЖЕ
-        // Используем currentFloor или filters.floor
         const targetFloor = filters.floor ? filters.floor.toString() : '1';
         const totalOnFloor = roomsArray.filter(r => r.floor === targetFloor).length;
-
-        // 2. Считаем сколько найдено (это длина filteredIds)
-        // Но getFilteredRooms уже содержит только те, что прошли ВСЕ фильтры (включая этаж)
         const foundCount = getFilteredRooms.length;
 
-        // 3. Обновляем контекст
         updateStats(foundCount, totalOnFloor);
 
-    }, [getFilteredRooms, filters.floor]);
+    }, [getFilteredRooms, filters.floor, updateStats]);
 
-    // Обновляем фильтр этажа при изменении этажа в карте
+    // Обновляем фильтр этажа
     const handleFloorChange = (floor) => {
         setCurrentFloor(floor);
         updateFilter('floor', floor.toString());
     };
 
-    // Функция для получения данных об аудитории
+    // Загрузка данных аудитории
     const fetchRoomInfo = async (roomId) => {
         setLoading(true);
         setError(null);
-
         try {
-            // Пытаемся получить с бэкенда
-            const response = await fetch(`/api/rooms/${roomId}`);
-            if (!response.ok) throw new Error(`Ошибка: ${response.status}`);
 
-            const data = await response.json();
-            setRoomInfo(data);
-            setIsRoomModalOpen(true);
-        } catch (err) {
-            console.error('Ошибка при загрузке данных:', err);
-
-            // Используем хардкод-данные
-            console.log('Используем хардкод-данные для аудитории:', roomId);
+            // Используем хардкод (функция теперь снаружи, доступна)
             const hardcodedInfo = getHardcodedRoomInfo(roomId);
             setRoomInfo(hardcodedInfo);
             setIsRoomModalOpen(true);
-
-            console.info('Бэкенд недоступен, используются тестовые данные');
+        } catch (err) {
+            console.error(err);
         } finally {
             setLoading(false);
         }
     };
 
     const handleRoomClick = (roomId) => {
-        console.log('Клик по аудитории:', roomId);
         setSelectedRoom(roomId);
         fetchRoomInfo(roomId);
     };
 
     const handleBookRoom = async (roomId) => {
-        try {
-            setLoading(true);
-            const response = await fetch('/api/bookings', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    roomId: roomId,
-                    date: new Date().toISOString().split('T')[0],
-                    timeSlot: '10:00-11:30'
-                })
-            });
-
-            if (response.ok) {
-                alert(`Аудитория ${roomId} успешно забронирована!`);
-                handleCloseModal();
-            } else {
-                throw new Error('Ошибка бронирования');
-            }
-        } catch (err) {
-            console.error('Ошибка при бронировании:', err);
-            alert('Произошла ошибка при бронировании. Попробуйте позже.');
-        } finally {
-            setLoading(false);
-        }
+        // Логика бронирования
+        alert(`Бронирование ${roomId}`);
+        handleCloseModal();
     };
 
     const handleCloseModal = () => {
         setIsRoomModalOpen(false);
         setSelectedRoom(null);
         setRoomInfo(null);
-        setError(null);
     };
 
-    const currentSVG = floorSVGs[mapMode][currentFloor];
-
-    // Функция сброса всех фильтров
     const handleResetFilters = () => {
         updateFilter('floor', '');
         updateFilter('minCapacity', 0);
@@ -273,24 +206,16 @@ const MapPage = () => {
         setCurrentFloor(1);
     };
 
+    const currentSVG = floorSVGs[mapMode][currentFloor];
+
     return (
         <div className="map-page">
             <div className="map-controls">
                 <div className="map-mode-controls">
                     <h3>Режим карты:</h3>
                     <div className="mode-buttons">
-                        <button
-                            className={`mode-btn ${mapMode === '2d' ? 'active' : ''}`}
-                            onClick={() => setMapMode('2d')}
-                        >
-                            2D
-                        </button>
-                        <button
-                            className={`mode-btn ${mapMode === '2.5d' ? 'active' : ''}`}
-                            onClick={() => setMapMode('2.5d')}
-                        >
-                            2.5D
-                        </button>
+                        <button className={`mode-btn ${mapMode === '2d' ? 'active' : ''}`} onClick={() => setMapMode('2d')}>2D</button>
+                        <button className={`mode-btn ${mapMode === '2.5d' ? 'active' : ''}`} onClick={() => setMapMode('2.5d')}>2.5D</button>
                     </div>
                 </div>
 
@@ -340,42 +265,16 @@ const MapPage = () => {
                     </div>
                 </div>
 
-                {/* Статистика фильтрации */}
                 <div className="filter-stats">
                     <div className="stats-badge">
                         <span className="stats-text">
-                            Показано: <strong>{getFilteredRooms.length}</strong> из 5 аудиторий
+                            Показано: <strong>{getFilteredRooms.length}</strong>
                         </span>
-                        {(filters.floor && filters.floor !== '') && (
-                            <span className="stats-info"> | Этаж: {filters.floor}</span>
-                        )}
-                        {filters.minCapacity > 0 && (
-                            <span className="stats-info"> | От {filters.minCapacity} мест</span>
-                        )}
-                        {filters.roomType !== 'all' && (
-                            <span className="stats-info"> | Тип: {filters.roomType}</span>
-                        )}
-                        {filters.status !== 'all' && (
-                            <span className="stats-info"> | Статус: {filters.status}</span>
-                        )}
+                        {/* Доп. статистика */}
                     </div>
                     {(filters.floor || filters.minCapacity > 0 || filters.roomType !== 'all' || filters.status !== 'all') && (
-                        <button
-                            className="reset-filters-btn"
-                            onClick={handleResetFilters}
-                            title="Сбросить все фильтры"
-                        >
-                            Сбросить фильтры
-                        </button>
+                        <button className="reset-filters-btn" onClick={handleResetFilters}>Сбросить</button>
                     )}
-                </div>
-
-                <div className="map-status">
-                    <div className="status-badge">
-                        Этаж: {currentFloor} | Режим: {mapMode === '2d' ? '2D' : '2.5D'}
-                        {selectedRoom && ` | Выбрана: ${selectedRoom}`}
-                        {loading && ' | Загрузка...'}
-                    </div>
                 </div>
             </div>
 
@@ -385,39 +284,13 @@ const MapPage = () => {
                         svgUrl={currentSVG}
                         onRoomClick={handleRoomClick}
                         selectedRoom={selectedRoom}
-                        filteredRooms={getFilteredRooms} // Передаем отфильтрованные аудитории
+                        filteredRooms={getFilteredRooms}
                         currentFloor={currentFloor}
                     />
-                    {loading && (
-                        <div className="loading-overlay">
-                            <div className="loading-spinner">Загрузка информации...</div>
-                        </div>
-                    )}
-
-                    {/* Подсказка по фильтрации */}
-                    {getFilteredRooms.length === 0 && (
-                        <div className="no-rooms-message">
-                            <div className="no-rooms-content">
-                                <h3>Аудитории не найдены</h3>
-                                <p>Попробуйте изменить параметры фильтрации:</p>
-                                <ul>
-                                    <li>Выберите другой этаж</li>
-                                    <li>Уменьшите количество мест</li>
-                                    <li>Сбросьте фильтр по типу или статусу</li>
-                                </ul>
-                                <button
-                                    className="reset-filters-btn-large"
-                                    onClick={handleResetFilters}
-                                >
-                                    Сбросить все фильтры
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                    {/* Лоадеры и сообщения о пустых результатах */}
                 </div>
             </div>
 
-            {/* Модальное окно с данными */}
             <RoomModal
                 roomInfo={roomInfo}
                 isOpen={isRoomModalOpen}

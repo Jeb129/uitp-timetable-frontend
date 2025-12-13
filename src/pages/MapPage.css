@@ -1,4 +1,5 @@
 /* src/pages/MapPage.css */
+
 .map-page {
     min-height: 100vh;
     background: #f5f5f5;
@@ -17,6 +18,7 @@
     flex-wrap: wrap;
 }
 
+/* === СТАРЫЕ СТИЛИ ДЛЯ ПЕРЕКЛЮЧАТЕЛЕЙ (Вернул как было) === */
 .map-mode-controls,
 .floor-controls {
     display: flex;
@@ -68,25 +70,117 @@
     color: #333;
 }
 
-.map-status {
+/* === НОВЫЕ СТИЛИ ДЛЯ БЫСТРЫХ ФИЛЬТРОВ И СБРОСА === */
+
+.quick-filters {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1; /* Занимает оставшееся место */
+    padding-left: 20px;
+    border-left: 1px solid #eee; /* Визуально отделяем от этажей */
+}
+
+.quick-filters h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #666;
+    white-space: nowrap;
+}
+
+.quick-filter-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.quick-filter-btn {
+    padding: 6px 14px;
+    border: 1px solid #e0e0e0;
+    background: white;
+    color: #555;
+    border-radius: 20px; /* "Пилюли" */
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.quick-filter-btn:hover {
+    border-color: #007bff;
+    color: #007bff;
+    background: #f8fbff;
+}
+
+.quick-filter-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+    box-shadow: 0 2px 5px rgba(0, 123, 255, 0.25);
+}
+
+/* === СТАТИСТИКА И КНОПКА СБРОСА === */
+
+.filter-stats {
+    display: flex;
+    align-items: center;
+    gap: 15px;
     margin-left: auto;
 }
 
-.status-badge {
-    background: #007bff;
-    color: white;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 14px;
-    font-weight: 500;
+.stats-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    font-size: 13px;
 }
 
+.stats-text {
+    color: #333;
+}
+
+.stats-text strong {
+    color: #007bff;
+}
+
+.stats-info {
+    font-size: 11px;
+    color: #888;
+}
+
+.reset-filters-btn {
+    padding: 8px 16px;
+    background: #fff5f5; /* Светло-красный фон */
+    border: 1px solid #ffc9c9;
+    color: #e03131; /* Красный текст */
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.reset-filters-btn:hover {
+    background: #e03131;
+    color: white;
+    border-color: #e03131;
+}
+
+/* Скрываем старый статус, если он не нужен */
+.map-status {
+    display: none;
+}
+
+/* Контейнер карты */
 .map-container {
     background: white;
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     overflow: hidden;
-    height: 70vh;
+    height: calc(100vh - 200px); /* Адаптивная высота */
+    position: relative;
 }
 
 .map-content {
@@ -95,16 +189,77 @@
     height: 100%;
 }
 
-/* Адаптивность */
+.loading-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(255,255,255,0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+}
+
+/* Сообщение, если ничего не найдено */
+.no-rooms-message {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    padding: 15px 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    text-align: center;
+    z-index: 5;
+    border-left: 4px solid #ff9800;
+}
+
+.no-rooms-message h3 {
+    margin: 0 0 5px 0;
+    font-size: 14px;
+}
+
+.reset-filters-btn-large {
+    margin-top: 10px;
+    padding: 6px 12px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+/* === АДАПТИВНОСТЬ === */
+@media (max-width: 1200px) {
+    .map-controls {
+        gap: 20px;
+    }
+
+    .quick-filters {
+        order: 3; /* Переносим фильтры на новую строку если тесно */
+        width: 100%;
+        border-left: none;
+        padding-left: 0;
+        border-top: 1px solid #eee;
+        padding-top: 15px;
+    }
+
+    .filter-stats {
+        margin-left: auto;
+    }
+}
+
 @media (max-width: 768px) {
     .map-page {
-        padding: 12px;
+        padding: 10px;
     }
 
     .map-controls {
-        gap: 15px;
         flex-direction: column;
         align-items: stretch;
+        gap: 15px;
+        padding: 15px;
     }
 
     .map-mode-controls,
@@ -112,40 +267,13 @@
         justify-content: space-between;
     }
 
-    .map-status {
-        margin-left: 0;
-        text-align: center;
-    }
-
-    .status-badge {
-        font-size: 12px;
-        padding: 6px 12px;
+    .filter-stats {
+        width: 100%;
+        justify-content: space-between;
+        margin-top: 10px;
     }
 
     .map-container {
         height: 60vh;
-    }
-}
-
-@media (max-width: 480px) {
-    .mode-buttons,
-    .floor-buttons {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .mode-btn,
-    .floor-btn {
-        flex: 1;
-        min-width: auto;
-    }
-
-    .modal-actions {
-        flex-direction: column;
-    }
-
-    .btn {
-        min-width: auto;
-        width: 100%;
     }
 }

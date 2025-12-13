@@ -59,11 +59,9 @@ const AppContent = () => {
                 </AppLayout>
             } />
             <Route path="/map" element={
-                <FilterProvider>
                     <AppLayout>
                         <MapPage />
                     </AppLayout>
-                </FilterProvider>
             } />
             <Route path="/auditoriums" element={
                 <AppLayout>
@@ -123,9 +121,11 @@ const AppContent = () => {
 function App() {
     return (
         <AuthProvider>
+            <FilterProvider>
                 <Router>
                     <AppContent />
                 </Router>
+            </FilterProvider>
         </AuthProvider>
     );
 }
