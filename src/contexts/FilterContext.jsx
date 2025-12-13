@@ -1,17 +1,31 @@
 // src/contexts/FilterContext.jsx
-import React, { createContext, useState, useContext, useMemo } from 'react';
+import React, {createContext, useState, useContext, useMemo, useCallback} from 'react';
 
 const FilterContext = createContext();
 
-export const useFilters = () => useContext(FilterContext);
+export const useFilters = () => {
+    const context = useContext(FilterContext);
+    if (!context) {
+        // Заглушка на случай ошибок, чтобы не падало
+        return {
+            filters: { corpus: 'Б', floor: '1', minCapacity: 0, roomType: 'all', status: 'all' },
+            roomStats: { found: 0, total: 0 },
+            updateFilter: () => {},
+            updateStats: () => {},
+            resetToDefaults: () => {},
+            clearFilters: () => {}
+        };
+    }
+    return context;
+};
 
 export const FilterProvider = ({ children }) => {
     const [filters, setFilters] = useState({
         corpus: 'Б',
-        floor: 1,
+        floor: '1',
         minCapacity: 0,
-        roomType: 'all', // 'all', 'lecture', 'study'
-        status: 'all', // 'all', 'free', 'busy'
+        roomType: 'all',
+        status: 'all',
         timeRange: ''
     });
 
@@ -20,20 +34,26 @@ export const FilterProvider = ({ children }) => {
         total: 0
     });
 
-    const updateFilter = (filterName, value) => {
+    const updateFilter = useCallback((filterName, value) => {
         setFilters(prev => ({
             ...prev,
             [filterName]: value
         }));
-    };
+    }, []);
 
-    const updateStats = (found, total) => {
-        setRoomStats({ found, total });
-    };
+    const updateStats = useCallback((found, total) => {
+        setRoomStats(prev => {
+
+            if (prev.found === found && prev.total === total) {
+                return prev;
+            }
+            return { found, total };
+        });
+    }, []);
 
 
 
-    const clearFilters = () => {
+    const clearFilters = useCallback(() => {
         setFilters({
             corpus: 'Б',
             floor: null,
@@ -42,19 +62,19 @@ export const FilterProvider = ({ children }) => {
             status: 'all',
             timeRange: ''
         });
-    };
+    }, []);
 
     // Значения по умолчанию для быстрого сброса
-    const resetToDefaults = () => {
+    const resetToDefaults = useCallback(() => {
         setFilters({
             corpus: 'Б',
-            floor: 2, // начальный этаж как в MapPage
+            floor: 2,
             minCapacity: 0,
             roomType: 'all',
             status: 'all',
             timeRange: ''
         });
-    };
+    }, []);
 
     const value = useMemo(() => ({
         filters,
@@ -63,7 +83,7 @@ export const FilterProvider = ({ children }) => {
         updateStats,
         clearFilters,
         resetToDefaults
-    }), [filters, roomStats, updateStats]);
+    }), [filters, roomStats, updateFilter, updateStats, resetToDefaults, clearFilters]);
 
     return (
         <FilterContext.Provider value={value}>
