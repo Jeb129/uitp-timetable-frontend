@@ -287,8 +287,12 @@ const MapPage = () => {
                 <div className="map-mode-controls">
                     <h3>Режим карты:</h3>
                     <div className="mode-buttons">
-                        <button className={`mode-btn ${mapMode === '2d' ? 'active' : ''}`} onClick={() => setMapMode('2d')}>2D</button>
-                        <button className={`mode-btn ${mapMode === '2.5d' ? 'active' : ''}`} onClick={() => setMapMode('2.5d')}>2.5D</button>
+                        <button className={`mode-btn ${mapMode === '2d' ? 'active' : ''}`}
+                                onClick={() => setMapMode('2d')}>2D
+                        </button>
+                        <button className={`mode-btn ${mapMode === '2.5d' ? 'active' : ''}`}
+                                onClick={() => setMapMode('2.5d')}>2.5D
+                        </button>
                     </div>
                 </div>
 
@@ -301,61 +305,12 @@ const MapPage = () => {
                                 className={`floor-btn ${currentFloor === floor ? 'active' : ''}`}
                                 onClick={() => handleFloorChange(floor)}
                             >
-                                2D План
+                                {floor}
                             </button>
-                            <button
-                                className={`mode-btn ${mapMode === '2.5d' ? 'active' : ''}`}
-                                onClick={() => setMapMode('2.5d')}
-                            >
-                                3D Просмотр
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="floor-controls">
-                        <h3>Этаж:</h3>
-                        <div className="floor-buttons">
-                            {[1, 2, 3, 4].map(floor => (
-                                <button
-                                    key={floor}
-                                    className={`floor-btn ${currentFloor === floor ? 'active' : ''}`}
-                                    onClick={() => setCurrentFloor(floor)}
-                                >
-                                    {floor}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="map-status">
-                        <div className="status-badge">
-                            Этаж: {currentFloor} | Режим: {mapMode === '2d' ? '2D План' : '3D Просмотр'}
-                            {selectedRoom && ` | Выбрана: ${selectedRoom}`}
-                            {loading && ' | Загрузка...'}
-                        </div>
+                        ))}
                     </div>
                 </div>
 
-                <div className="map-container">
-                    <div className="map-content">
-                        {mapMode === '2d' ? (
-                            <InteractiveSVG
-                                svgUrl={currentSVG}
-                                onRoomClick={handleRoomClick}
-                                selectedRoom={selectedRoom}
-                            />
-                        ) : (
-                            <ThreeDViewer
-                                floor={currentFloor}
-                            />
-                        )}
-
-                        {loading && (
-                            <div className="loading-overlay">
-                                <div className="loading-spinner">Загрузка информации...</div>
-                            </div>
-                        )}
-                    </div>
                 {/* Быстрые фильтры */}
                 <div className="quick-filters">
                     <h3>Быстрые фильтры:</h3>
@@ -398,30 +353,38 @@ const MapPage = () => {
                         <button className="reset-filters-btn" onClick={handleResetFilters}>Сбросить</button>
                     )}
                 </div>
+
+                <div className="map-status">
+                    <div className="status-badge">
+                        Этаж: {currentFloor} | Режим: {mapMode === '2d' ? '2D План' : '3D Просмотр'}
+                        {selectedRoom && ` | Выбрана: ${selectedRoom}`}
+                        {loading && ' | Загрузка...'}
+                    </div>
+                </div>
             </div>
 
             <div className="map-container">
                 <div className="map-content">
-                    <InteractiveSVG
-                        svgUrl={currentSVG}
-                        onRoomClick={handleRoomClick}
-                        selectedRoom={selectedRoom}
-                        filteredRooms={getFilteredRooms}
-                        currentFloor={currentFloor}
-                    />
-                    {/* Лоадеры и сообщения о пустых результатах */}
-                </div>
+                    {mapMode === '2d' ? (
+                        <InteractiveSVG
+                            svgUrl={currentSVG}
+                            onRoomClick={handleRoomClick}
+                            selectedRoom={selectedRoom}
+                        />
+                    ) : (
+                        <ThreeDViewer
+                            floor={currentFloor}
+                        />
+                    )}
 
-                {/* Модальное окно с данными */}
-                <RoomModal
-                    roomInfo={roomInfo}
-                    isOpen={isRoomModalOpen}
-                    onClose={handleCloseModal}
-                    onBook={handleBookRoom}
-                    loading={loading}
-                    error={error}
-                />
+                    {loading && (
+                        <div className="loading-overlay">
+                            <div className="loading-spinner">Загрузка информации...</div>
+                        </div>
+                    )}
+                </div>
             </div>
+        </div>
             );
             };
 
