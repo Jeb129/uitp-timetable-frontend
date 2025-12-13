@@ -179,8 +179,7 @@
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     overflow: hidden;
-    height: calc(100vh - 200px); /* Адаптивная высота */
-    position: relative;
+    height: 80vh;
 }
 
 .map-content {
@@ -277,3 +276,27 @@
         height: 60vh;
     }
 }
+
+@media (max-width: 480px) {
+    .mode-buttons,
+    .floor-buttons {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .mode-btn,
+    .floor-btn {
+        flex: 1;
+        min-width: auto;
+    }
+
+    .modal-actions {
+        flex-direction: column;
+    }
+
+    .btn {
+        min-width: auto;
+        width: 100%;
+    }
+}
+

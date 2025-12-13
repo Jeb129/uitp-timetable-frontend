@@ -1,15 +1,16 @@
 // src/pages/MapPage.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import InteractiveSVG from '../components/InteractiveSVG';
+import ThreeDViewer from '../components/ThreeDViewer';
 import RoomModal from '../components/modals/RoomModal';
 import { useFilters } from '../contexts/FilterContext';
 import './MapPage.css';
 
 // Импортируем SVG файлы
-import Floor1_2D from '../assets/maps/1flor.svg';
-import Floor2_2D from '../assets/maps/2flor.svg';
-import Floor3_2D from '../assets/maps/3flor.svg';
-import Floor4_2D from '../assets/maps/4flor.svg';
+import Floor1_2D from '../assets/maps/1floor.svg';
+import Floor2_2D from '../assets/maps/2floor.svg';
+import Floor3_2D from '../assets/maps/3floor.svg';
+import Floor4_2D from '../assets/maps/4floor.svg';
 
 const getHardcodedRoomInfo = (roomId) => {
     const roomData = {
@@ -125,6 +126,78 @@ const MapPage = () => {
         '2d': { 1: Floor1_2D, 2: Floor2_2D, 3: Floor3_2D, 4: Floor4_2D },
         '2.5d': { 1: Floor1_2D, 2: Floor2_2D, 3: Floor3_2D, 4: Floor4_2D }
     };
+    const getHardcodedRoomInfo = (roomId) => {
+        const roomData = {
+            '201': {
+                id: '201',
+                name: 'Аудитория 201',
+                type: 'Лекционная',
+                capacity: 50,
+                equipment: ['Проектор', 'Экран', 'Маркерная доска', 'Wi-Fi'],
+                status: 'свободна',
+                area: '60 м²',
+                floor: '2',
+                description: 'Основная лекционная аудитория с современным оборудованием'
+            },
+            '202': {
+                id: '202',
+                name: 'Аудитория 202',
+                type: 'Компьютерный класс',
+                capacity: 25,
+                equipment: ['Компьютеры', 'Проектор', 'Интерактивная доска'],
+                status: 'свободна',
+                area: '45 м²',
+                floor: '2',
+                description: 'Компьютерный класс для практических занятий'
+            },
+            '203': {
+                id: '203',
+                name: 'Аудитория 203',
+                type: 'Семинарская',
+                capacity: 30,
+                equipment: ['Телевизор', 'Маркерная доска'],
+                status: 'занята',
+                area: '40 м²',
+                floor: '2',
+                description: 'Семинарская комната для групповых занятий'
+            },
+            '301': {
+                id: '301',
+                name: 'Аудитория 301',
+                type: 'Лаборатория',
+                capacity: 20,
+                equipment: ['Специальное оборудование', 'Вытяжной шкаф'],
+                status: 'свободна',
+                area: '55 м²',
+                floor: '3',
+                description: 'Химическая лаборатория'
+            },
+            '302': {
+                id: '302',
+                name: 'Аудитория 302',
+                type: 'Читальный зал',
+                capacity: 40,
+                equipment: ['Книжные стеллажи', 'Компьютеры', 'Принтер'],
+                status: 'свободна',
+                area: '70 м²',
+                floor: '3',
+                description: 'Читальный зал библиотеки'
+            }
+        };
+
+        return roomData[roomId] || {
+            id: roomId,
+            name: `Аудитория ${roomId}`,
+            type: 'Учебная',
+            capacity: 35,
+            equipment: ['Проектор', 'Доска'],
+            status: 'свободна',
+            area: '50 м²',
+            floor: String(roomId).charAt(0) || '2',
+            description: 'Стандартная учебная аудитория',
+            panorama: `${roomId}.jpg` // Только имя файла, без пути
+        };
+    };
 
     // Получаем отфильтрованные аудитории
     const getFilteredRooms = useMemo(() => {
@@ -228,12 +301,61 @@ const MapPage = () => {
                                 className={`floor-btn ${currentFloor === floor ? 'active' : ''}`}
                                 onClick={() => handleFloorChange(floor)}
                             >
-                                {floor}
+                                2D План
                             </button>
-                        ))}
+                            <button
+                                className={`mode-btn ${mapMode === '2.5d' ? 'active' : ''}`}
+                                onClick={() => setMapMode('2.5d')}
+                            >
+                                3D Просмотр
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="floor-controls">
+                        <h3>Этаж:</h3>
+                        <div className="floor-buttons">
+                            {[1, 2, 3, 4].map(floor => (
+                                <button
+                                    key={floor}
+                                    className={`floor-btn ${currentFloor === floor ? 'active' : ''}`}
+                                    onClick={() => setCurrentFloor(floor)}
+                                >
+                                    {floor}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="map-status">
+                        <div className="status-badge">
+                            Этаж: {currentFloor} | Режим: {mapMode === '2d' ? '2D План' : '3D Просмотр'}
+                            {selectedRoom && ` | Выбрана: ${selectedRoom}`}
+                            {loading && ' | Загрузка...'}
+                        </div>
                     </div>
                 </div>
 
+                <div className="map-container">
+                    <div className="map-content">
+                        {mapMode === '2d' ? (
+                            <InteractiveSVG
+                                svgUrl={currentSVG}
+                                onRoomClick={handleRoomClick}
+                                selectedRoom={selectedRoom}
+                            />
+                        ) : (
+                            <ThreeDViewer
+                                floor={currentFloor}
+                            />
+                        )}
+
+                        {loading && (
+                            <div className="loading-overlay">
+                                <div className="loading-spinner">Загрузка информации...</div>
+                            </div>
+                        )}
+                    </div>
                 {/* Быстрые фильтры */}
                 <div className="quick-filters">
                     <h3>Быстрые фильтры:</h3>
@@ -289,18 +411,18 @@ const MapPage = () => {
                     />
                     {/* Лоадеры и сообщения о пустых результатах */}
                 </div>
+
+                {/* Модальное окно с данными */}
+                <RoomModal
+                    roomInfo={roomInfo}
+                    isOpen={isRoomModalOpen}
+                    onClose={handleCloseModal}
+                    onBook={handleBookRoom}
+                    loading={loading}
+                    error={error}
+                />
             </div>
+            );
+            };
 
-            <RoomModal
-                roomInfo={roomInfo}
-                isOpen={isRoomModalOpen}
-                onClose={handleCloseModal}
-                onBook={handleBookRoom}
-                loading={loading}
-                error={error}
-            />
-        </div>
-    );
-};
-
-export default MapPage;
+            export default MapPage;

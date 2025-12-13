@@ -26,6 +26,12 @@
     stroke-width: 1px;
 }
 
+/* Эффект при наведении */
+.interactive-rect.rect-hover {
+    stroke: #1976d2;
+    stroke-width: 4px;
+}
+
 .filtered-in, .filtered-in * {
     fill: #4CAF50 !important;
     opacity: 1 !important;
