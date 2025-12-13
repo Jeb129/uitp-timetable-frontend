@@ -59,7 +59,7 @@
 .interactive-rect.filtered-in:hover,
 .interactive-rect.filtered-in:hover * {
     fill: #66BB6A !important;
-    filter: brightness(1.1);
+    stroke-width: 4px;
 }
 
 
@@ -74,6 +74,7 @@
     white-space: nowrap;
     z-index: 1000;
     pointer-events: none;
+    stroke-width: 4px;
     transform: translateY(-20px); /* Чуть выше курсора */
 }
 
