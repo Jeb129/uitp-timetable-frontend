@@ -53,7 +53,7 @@ const ThreeDViewer = ({ floor = 1 }) => {
 
         // НАЧАЛЬНАЯ ПОЗИЦИЯ КАМЕРЫ с поворотом на 45 градусов против часовой стрелки
         const initialDistance = 70; // Начальное расстояние
-        const angle = -Math.PI / 2; // -45 градусов (против часовой стрелки)
+        const angle = -Math.PI / -2; // -45 градусов (против часовой стрелки)
 
         // Вычисляем позицию камеры с учетом угла
         const x = initialDistance * Math.cos(angle);
@@ -93,7 +93,7 @@ const ThreeDViewer = ({ floor = 1 }) => {
         controls.enableDamping = true;
         controls.dampingFactor = 0.25;
         controls.screenSpacePanning = false;
-        controls.minDistance = 1;
+        controls.minDistance = 20;
         controls.maxDistance = 200;
         controls.maxPolarAngle = Math.PI;
         controls.target.copy(initialCameraTargetRef.current);
