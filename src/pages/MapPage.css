@@ -86,7 +86,7 @@
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     overflow: hidden;
-    height: 70vh;
+    height: 80vh;
 }
 
 .map-content {
@@ -149,3 +149,4 @@
         width: 100%;
     }
 }
+

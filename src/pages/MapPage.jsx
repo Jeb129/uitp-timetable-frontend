@@ -1,14 +1,15 @@
 // src/pages/MapPage.jsx
 import React, { useState } from 'react';
 import InteractiveSVG from '../components/InteractiveSVG';
+import ThreeDViewer from '../components/ThreeDViewer';
 import RoomModal from '../components/modals/RoomModal';
 import './MapPage.css';
 
 // Импортируем SVG файлы
-import Floor1_2D from '../assets/maps/1flor.svg';
-import Floor2_2D from '../assets/maps/2flor.svg';
-import Floor3_2D from '../assets/maps/3flor.svg';
-import Floor4_2D from '../assets/maps/4flor.svg';
+import Floor1_2D from '../assets/maps/1floor.svg';
+import Floor2_2D from '../assets/maps/2floor.svg';
+import Floor3_2D from '../assets/maps/3floor.svg';
+import Floor4_2D from '../assets/maps/4floor.svg';
 
 const MapPage = () => {
     const [mapMode, setMapMode] = useState('2d');
@@ -46,8 +47,7 @@ const MapPage = () => {
                 status: 'свободна',
                 area: '60 м²',
                 floor: '2',
-                description: 'Основная лекционная аудитория с современным оборудованием',
-                panorama: '201.jpg' // Только имя файла, без пути
+                description: 'Основная лекционная аудитория с современным оборудованием'
             },
             '202': {
                 id: '202',
@@ -58,8 +58,7 @@ const MapPage = () => {
                 status: 'свободна',
                 area: '45 м²',
                 floor: '2',
-                description: 'Компьютерный класс для практических занятий',
-                panorama: '202.jpg' // Только имя файла, без пути
+                description: 'Компьютерный класс для практических занятий'
             },
             '203': {
                 id: '203',
@@ -70,8 +69,7 @@ const MapPage = () => {
                 status: 'занята',
                 area: '40 м²',
                 floor: '2',
-                description: 'Семинарская комната для групповых занятий',
-                panorama: '203.jpg' // Только имя файла, без пути
+                description: 'Семинарская комната для групповых занятий'
             },
             '301': {
                 id: '301',
@@ -82,8 +80,7 @@ const MapPage = () => {
                 status: 'свободна',
                 area: '55 м²',
                 floor: '3',
-                description: 'Химическая лаборатория',
-                panorama: '301.jpg' // Только имя файла, без пути
+                description: 'Химическая лаборатория'
             },
             '302': {
                 id: '302',
@@ -94,8 +91,7 @@ const MapPage = () => {
                 status: 'свободна',
                 area: '70 м²',
                 floor: '3',
-                description: 'Читальный зал библиотеки',
-                panorama: '302.jpg' // Только имя файла, без пути
+                description: 'Читальный зал библиотеки'
             }
         };
 
@@ -199,74 +195,81 @@ const MapPage = () => {
     return (
         <div className="map-page">
             <div className="map-controls">
-                <div className="map-mode-controls">
-                    <h3>Режим карты:</h3>
-                    <div className="mode-buttons">
-                        <button
-                            className={`mode-btn ${mapMode === '2d' ? 'active' : ''}`}
-                            onClick={() => setMapMode('2d')}
-                        >
-                            2D
-                        </button>
-                        <button
-                            className={`mode-btn ${mapMode === '2.5d' ? 'active' : ''}`}
-                            onClick={() => setMapMode('2.5d')}
-                        >
-                            2.5D
-                        </button>
-                    </div>
-                </div>
-
-                <div className="floor-controls">
-                    <h3>Этаж:</h3>
-                    <div className="floor-buttons">
-                        {[1, 2, 3, 4].map(floor => (
+                    <div className="map-mode-controls">
+                        <h3>Режим карты:</h3>
+                        <div className="mode-buttons">
                             <button
-                                key={floor}
-                                className={`floor-btn ${currentFloor === floor ? 'active' : ''}`}
-                                onClick={() => setCurrentFloor(floor)}
+                                className={`mode-btn ${mapMode === '2d' ? 'active' : ''}`}
+                                onClick={() => setMapMode('2d')}
                             >
-                                {floor}
+                                2D План
                             </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="map-status">
-                    <div className="status-badge">
-                        Этаж: {currentFloor} | Режим: {mapMode === '2d' ? '2D' : '2.5D'}
-                        {selectedRoom && ` | Выбрана: ${selectedRoom}`}
-                        {loading && ' | Загрузка...'}
-                    </div>
-                </div>
-            </div>
-
-            <div className="map-container">
-                <div className="map-content">
-                    <InteractiveSVG
-                        svgUrl={currentSVG}
-                        onRoomClick={handleRoomClick}
-                        selectedRoom={selectedRoom}
-                    />
-                    {loading && (
-                        <div className="loading-overlay">
-                            <div className="loading-spinner">Загрузка информации...</div>
+                            <button
+                                className={`mode-btn ${mapMode === '2.5d' ? 'active' : ''}`}
+                                onClick={() => setMapMode('2.5d')}
+                            >
+                                3D Просмотр
+                            </button>
                         </div>
-                    )}
+                    </div>
+
+                    <div className="floor-controls">
+                        <h3>Этаж:</h3>
+                        <div className="floor-buttons">
+                            {[1, 2, 3, 4].map(floor => (
+                                <button
+                                    key={floor}
+                                    className={`floor-btn ${currentFloor === floor ? 'active' : ''}`}
+                                    onClick={() => setCurrentFloor(floor)}
+                                >
+                                    {floor}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="map-status">
+                        <div className="status-badge">
+                            Этаж: {currentFloor} | Режим: {mapMode === '2d' ? '2D План' : '3D Просмотр'}
+                            {selectedRoom && ` | Выбрана: ${selectedRoom}`}
+                            {loading && ' | Загрузка...'}
+                        </div>
+                    </div>
                 </div>
+
+                <div className="map-container">
+                    <div className="map-content">
+                        {mapMode === '2d' ? (
+                            <InteractiveSVG
+                                svgUrl={currentSVG}
+                                onRoomClick={handleRoomClick}
+                                selectedRoom={selectedRoom}
+                            />
+                        ) : (
+                            <ThreeDViewer
+                                floor={currentFloor}
+                            />
+                        )}
+
+                        {loading && (
+                            <div className="loading-overlay">
+                                <div className="loading-spinner">Загрузка информации...</div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Модальное окно с данными */}
+                <RoomModal
+                    roomInfo={roomInfo}
+                    isOpen={isRoomModalOpen}
+                    onClose={handleCloseModal}
+                    onBook={handleBookRoom}
+                    loading={loading}
+                    error={error}
+                />
             </div>
+            );
+            };
 
-            {/* Модальное окно с данными */}
-            <RoomModal
-                roomInfo={roomInfo}
-                isOpen={isRoomModalOpen}
-                onClose={handleCloseModal}
-                onBook={handleBookRoom}
-                loading={loading}
-                error={error}
-            />
-        </div>
-    );
-};
-
-export default MapPage;
+            export default MapPage;

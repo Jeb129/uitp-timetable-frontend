@@ -29,9 +29,8 @@
 
 /* Эффект при наведении */
 .interactive-rect.rect-hover {
-    filter: brightness(0.8);
     stroke: #1976d2;
-    stroke-width: 2px;
+    stroke-width: 4px;
 }
 
 /* Эффект для выбранного rect */
