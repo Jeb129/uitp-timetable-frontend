@@ -1,0 +1,19 @@
+import {privateApi, publicApi} from './apiClient';
+
+export const login = async (username, password) => {
+  const response = await publicApi.post('/auth/access/', { username, password });
+  localStorage.setItem('access_token', response.data.access);
+  localStorage.setItem('refresh_token', response.data.refresh);
+  return response.data;
+};
+export const logout = () => {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  window.location.reload();
+};
+
+export const verifyToken = async () => {
+  return await privateApi.post('/auth/verify/', {
+    token: localStorage.getItem('access_token'),
+  });
+};
