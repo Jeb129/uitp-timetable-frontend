@@ -13,6 +13,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import RulesPage from './pages/RulesPage';
 import AdminPage from "./pages/AdminPage.jsx";
+import KGUConfirmPage from "./pages/KGUConfirmPage.jsx";
 import { FilterProvider } from './contexts/FilterContext';
 
 
@@ -112,6 +113,11 @@ const AppContent = () => {
             <Route path="/rules" element={
                 <AppLayout>
                     <RulesPage />
+                </AppLayout>
+            } />
+            <Route path="/kgu-confirm" element={
+                <AppLayout>
+                    <KGUConfirmPage />
                 </AppLayout>
             } />
         </Routes>

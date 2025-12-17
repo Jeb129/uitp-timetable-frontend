@@ -1,43 +1,65 @@
-// src/pages/RegisterPage.jsx
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import './RegisterPage.css';
+import { publicApi } from '../utils/api/axios'; // Импорт публичного API
+import './LoginPage.css';
 
 const RegisterPage = () => {
-    const [login, setLogin] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [error, setError] = useState('');
+
     const navigate = useNavigate();
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        // Пример регистрации
-        alert('Регистрация успешна!');
-        navigate('/login');
+        setError('');
+
+        if (password !== confirmPassword) {
+            setError('Пароли не совпадают');
+            return;
+        }
+
+        if (password.length < 6) {
+            setError('Пароль должен быть не менее 6 символов');
+            return;
+        }
+
+        try {
+            // Используем publicApi
+            await publicApi.post('/auth/register/', {
+                email: email,
+                password: password
+            });
+
+            alert('Регистрация прошла успешно! Теперь войдите в систему.');
+            navigate('/login');
+
+        } catch (err) {
+            if (err.response && err.response.data && err.response.data.message) {
+                setError(err.response.data.message);
+            } else {
+                setError('Ошибка при регистрации. Возможно, пользователь уже существует.');
+            }
+        }
     };
 
     return (
-        <div className="register-page-centered">
-            <div className="register-form-container">
+        <div className="login-page-centered">
+            <div className="login-form-container">
                 <h1>Регистрация</h1>
-                <form className="register-form" onSubmit={handleSubmit}>
-                    <input
-                        type="text"
-                        placeholder="Логин"
-                        className="register-input"
-                        value={login}
-                        onChange={(e) => setLogin(e.target.value)}
-                    />
-                    <input
-                        type="password"
-                        placeholder="Пароль"
-                        className="register-input"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                    />
-                    <button type="submit" className="register-button">Зарегистрироваться</button>
+                {error && <div className="error-message" style={{color: 'red', marginBottom: '10px', textAlign: 'center'}}>{error}</div>}
+
+                <form className="login-form" onSubmit={handleSubmit}>
+                    <input type="email" placeholder="Email" className="login-input" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                    <input type="password" placeholder="Пароль" className="login-input" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                    <input type="password" placeholder="Повторите пароль" className="login-input" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                    <button type="submit" className="login-button">Зарегистрироваться</button>
                 </form>
-                <div className="register-footer">
-                    <Link to="/login" className="login-link">Уже есть аккаунт? Войти</Link>
+
+                <div className="login-footer" style={{ marginTop: '15px', textAlign: 'center' }}>
+                    <span style={{color: '#666'}}>Уже есть аккаунт? </span>
+                    <Link to="/login" className="forgot-password">Войти</Link>
                 </div>
             </div>
         </div>

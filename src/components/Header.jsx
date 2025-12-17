@@ -2,6 +2,7 @@
 import React, {useEffect, useState} from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { privateApi } from '../utils/api/axios'; // Импортируем privateApi
 
 import BellIcon from './icons/header/BellIcon';
 import ProfileIcon from './icons/header/ProfileIcon';
@@ -14,11 +15,18 @@ import './Header.css';
 import { getFilteredTimes } from '../utils/rulesValidation.js';
 import {useFilters} from "../contexts/FilterContext.jsx";
 
-const initialNotifications = [
-    { id: 1, text: 'Аудитория 205 забронирована на 15:00', time: '10 мин назад', read: false },
-    { id: 2, text: 'Новое расписание на следующую неделю', time: '1 час назад', read: false },
-    { id: 3, text: 'Напоминание: встреча в 14:00', time: '2 часа назад', read: false },
-];
+// Вспомогательная функция для форматирования времени (из ISO в "X мин назад")
+const formatRelativeTime = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+
+    if (diffInSeconds < 60) return 'Только что';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} мин назад`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} ч назад`;
+    return date.toLocaleDateString();
+};
 
 const Header = () => {
     const location = useLocation();
@@ -35,16 +43,74 @@ const Header = () => {
     const [availableTimes, setAvailableTimes] = useState([]);
 
     const [showNotifications, setShowNotifications] = useState(false);
-    const [notifications, setNotifications] = useState(initialNotifications);
+    // Изначально пустой массив, загружаем с бэка
+    const [notifications, setNotifications] = useState([]);
+
     const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
     const [isTimeRangeModalOpen, setIsTimeRangeModalOpen] = useState(false);
+
+    // --- ЛОГИКА УВЕДОМЛЕНИЙ ---
+
+    // Загрузка уведомлений при изменении пользователя
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            if (user) {
+                try {
+                    // Делаем запрос к API.
+                    // Предполагается, что на бэке есть роут GET /notifications/
+                    // Если вы используете generic database read, путь может отличаться
+                    const response = await privateApi.get('/notifications/');
+
+                    // Маппим данные с бэка в формат фронтенда
+                    const mappedNotifications = response.data.map(n => ({
+                        id: n.id,
+                        text: n.message || 'Без текста', // Поле message из Python модели Notification
+                        time: formatRelativeTime(n.created_at || n.date), // created_at или date
+                        read: n.is_read || false // Поле is_read (если есть)
+                    }));
+
+                    // Сортируем: новые сверху
+                    setNotifications(mappedNotifications.reverse());
+                } catch (error) {
+                    console.error("Ошибка получения уведомлений:", error);
+                    // Можно оставить пустой массив или показать ошибку
+                }
+            } else {
+                setNotifications([]);
+            }
+        };
+
+        fetchNotifications();
+
+        // Опционально: можно поставить интервал для опроса новых уведомлений
+        // const interval = setInterval(fetchNotifications, 60000);
+        // return () => clearInterval(interval);
+    }, [user]);
+
+    // Обновление статуса прочтения
+    const toggleReadStatus = async (id) => {
+        // Оптимистичное обновление UI (сразу меняем вид, не дожидаясь бэка)
+        setNotifications(notifications.map(not =>
+            not.id === id ? { ...not, read: !not.read } : not
+        ));
+
+        // Отправка запроса на бэк (если бэк поддерживает обновление статуса)
+        if (user) {
+            try {
+                await privateApi.post('/notifications/read', { id });
+            } catch (error) {
+                console.error("Не удалось обновить статус уведомления", error);
+            }
+        }
+    };
+
+    // --- КОНЕЦ ЛОГИКИ УВЕДОМЛЕНИЙ ---
 
     useEffect(() => {
         if (isMapPage) {
             const times = getFilteredTimes(userType);
             setAvailableTimes(times);
 
-            // Если есть доступные времена и ничего не выбрано, выбираем первый
             if (times.length > 0 && !selectedTime) {
                 setSelectedTime(times[0].value);
             }
@@ -52,12 +118,6 @@ const Header = () => {
     }, [userType, isMapPage, selectedTime]);
 
     const toggleNotifications = () => setShowNotifications(!showNotifications);
-
-    const toggleReadStatus = (id) => {
-        setNotifications(notifications.map(not =>
-            not.id === id ? { ...not, read: !not.read } : not
-        ));
-    };
 
     const goToProfileOrLogin = () => {
         if (user) {
@@ -81,13 +141,11 @@ const Header = () => {
 
 
     const handleTimeRangeSelect = (timeRange) => {
-        // Проверяем, что выбранное время есть в списке доступных
         const isValidTime = availableTimes.some(time => time.value === timeRange);
         if (isValidTime) {
             setSelectedTime(timeRange);
         } else {
             console.warn('Выбранное время недоступно для вашего типа пользователя');
-            // Выбираем первое доступное время
             if (availableTimes.length > 0) {
                 setSelectedTime(availableTimes[0].value);
             }
@@ -114,25 +172,24 @@ const Header = () => {
     const handleSeatsChange = (e) => {
         const value = e.target.value;
         if (value === '' || /^\d+$/.test(value)) {
-            // Обновляем глобальный фильтр
             updateFilter('minCapacity', value === '' ? 0 : parseInt(value));
         }
     };
 
-    // Обработчик изменения этажа
     const handleFloorChange = (e) => {
         updateFilter('floor', e.target.value);
     };
 
-    // Обработчик изменения корпуса
     const handleCorpusChange = (e) => {
         updateFilter('corpus', e.target.value);
     };
 
+    // Подсчет непрочитанных уведомлений для бейджика (красная точка)
+    const unreadCount = notifications.filter(n => !n.read).length;
+
     return (
         <>
             <header className="header">
-                {/* Основной ряд */}
                 <div className="header-main">
                     <h1 className="page-title">
                         {isMapPage ? 'Карта' :
@@ -145,37 +202,58 @@ const Header = () => {
                                                     'КГУ'}
                     </h1>
                     <div className="header-actions">
-                        <div className="notification-dropdown">
-                            <button className="icon-btn" onClick={toggleNotifications}>
-                                <BellIcon />
-                            </button>
+                        {/* Отображаем колокольчик только для авторизованных пользователей */}
+                        {user && (
+                            <div className="notification-dropdown">
+                                <button className="icon-btn" onClick={toggleNotifications} style={{position: 'relative'}}>
+                                    <BellIcon />
+                                    {/* Красная точка, если есть непрочитанные */}
+                                    {unreadCount > 0 && (
+                                        <span className="notification-badge" style={{
+                                            position: 'absolute',
+                                            top: '5px',
+                                            right: '5px',
+                                            width: '8px',
+                                            height: '8px',
+                                            backgroundColor: 'red',
+                                            borderRadius: '50%'
+                                        }}></span>
+                                    )}
+                                </button>
 
-                            {showNotifications && (
-                                <div className="notification-menu">
-                                    <div className="notification-header">
-                                        <h3>Уведомления</h3>
-                                        <button className="close-btn" onClick={() => setShowNotifications(false)}>×</button>
+                                {showNotifications && (
+                                    <div className="notification-menu">
+                                        <div className="notification-header">
+                                            <h3>Уведомления</h3>
+                                            <button className="close-btn" onClick={() => setShowNotifications(false)}>×</button>
+                                        </div>
+                                        <ul className="notification-list">
+                                            {notifications.length === 0 ? (
+                                                <li className="notification-item" style={{justifyContent: 'center', color: '#888'}}>
+                                                    Нет новых уведомлений
+                                                </li>
+                                            ) : (
+                                                notifications.map((not) => (
+                                                    <li key={not.id} className={`notification-item ${not.read ? 'read' : ''}`}>
+                                                        <div className="notification-content">
+                                                            <p>{not.text}</p>
+                                                            <span className="notification-time">{not.time}</span>
+                                                        </div>
+                                                        <button
+                                                            className={`read-button ${not.read ? 'read' : ''}`}
+                                                            onClick={() => toggleReadStatus(not.id)}
+                                                            aria-label={not.read ? 'Отметить как непрочитанное' : 'Отметить как прочитанное'}
+                                                        >
+                                                            <CheckIcon />
+                                                        </button>
+                                                    </li>
+                                                ))
+                                            )}
+                                        </ul>
                                     </div>
-                                    <ul className="notification-list">
-                                        {notifications.map((not) => (
-                                            <li key={not.id} className={`notification-item ${not.read ? 'read' : ''}`}>
-                                                <div className="notification-content">
-                                                    <p>{not.text}</p>
-                                                    <span className="notification-time">{not.time}</span>
-                                                </div>
-                                                <button
-                                                    className={`read-button ${not.read ? 'read' : ''}`}
-                                                    onClick={() => toggleReadStatus(not.id)}
-                                                    aria-label={not.read ? 'Отметить как непрочитанное' : 'Отметить как прочитанное'}
-                                                >
-                                                    <CheckIcon />
-                                                </button>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-                        </div>
+                                )}
+                            </div>
+                        )}
 
                         <button className="icon-btn" onClick={goToProfileOrLogin}>
                             <ProfileIcon />
@@ -187,11 +265,10 @@ const Header = () => {
                 {isMapPage && (
                     <div className="header-secondary visible">
                         <div className="filter-group">
-                            {/* Корпус с подписью */}
                             <div className="filter-with-label">
                                 <label className="filter-label">Корпус</label>
                                 <select
-                                    value={filters.corpus || 'Б'} // Берем из контекста
+                                    value={filters.corpus || 'Б'}
                                     onChange={handleCorpusChange}
                                     className="corpus-select"
                                 >
@@ -201,11 +278,10 @@ const Header = () => {
                                 </select>
                             </div>
 
-                            {/* Этаж с подписью */}
                             <div className="filter-with-label">
                                 <label className="filter-label">Этаж</label>
                                 <select
-                                    value={filters.floor || '1'} // Берем из контекста
+                                    value={filters.floor || '1'}
                                     onChange={handleFloorChange}
                                     className="floor-select"
                                 >
@@ -233,17 +309,15 @@ const Header = () => {
                                 </select>
                             </div>
 
-                            {/* Доступные аудитории с общим лейблом */}
                             <div className="auditoriums-section">
                                 <label className="auditoriums-label">Аудитории</label>
                                 <div className="auditoriums-stats single-stat">
-                <span className="stat-item">
-                    Найдено: <strong>{roomStats.found}</strong> из {roomStats.total}
-                </span>
+                                    <span className="stat-item">
+                                        Найдено: <strong>{roomStats.found}</strong> из {roomStats.total}
+                                    </span>
                                 </div>
                             </div>
 
-                            {/* Кнопка выбора времени с информацией */}
                             <div className="filter-with-label time-filter">
                                 <label className="filter-label">Время</label>
                                 <div className="time-select-wrapper">
@@ -267,7 +341,6 @@ const Header = () => {
                                 </div>
                             </div>
 
-                            {/* Поле для количества мест */}
                             <div className="filter-with-label">
                                 <label className="filter-label">Мест</label>
                                 <input
@@ -289,12 +362,10 @@ const Header = () => {
                 )}
             </header>
 
-            {/* Модальное окно правил */}
             {isRulesModalOpen && (
                 <RulesModal onClose={closeRulesModal} />
             )}
 
-            {/* Модальное окно выбора временного интервала */}
             {isTimeRangeModalOpen && (
                 <TimeRangeModal
                     onClose={closeTimeRangeModal}
