@@ -34,7 +34,7 @@ const Sidebar = () => {
     return (
         <aside className="sidebar">
             <div>
-                <img src="/src/assets/KGU.png" alt="Логотип КГУ" className="logo"/>
+                <img src="/src/assets/Logo.jpg" alt="Логотип" className="logo"/>
             </div>
             <nav>
                 {menuItems.map((item) => {

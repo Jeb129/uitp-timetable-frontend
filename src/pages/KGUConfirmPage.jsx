@@ -1,9 +1,12 @@
+// src/pages/KGUConfirmPage.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { privateApi } from '../utils/api/axios'; // Приватный API, так как юзер уже залогинен
+import { useAuth } from '../contexts/AuthContext';
+import { privateApi } from '../utils/api/axios';
 import './LoginPage.css';
 
 const KGUConfirmPage = () => {
+    const { user } = useAuth(); // Получаем текущего пользователя
     const [kguEmail, setKguEmail] = useState('');
     const [status, setStatus] = useState({ type: '', message: '' });
     const [isLoading, setIsLoading] = useState(false);
@@ -15,26 +18,39 @@ const KGUConfirmPage = () => {
         setIsLoading(true);
 
         try {
-            // privateApi автоматически добавит Authorization header
+            //  Проверяем наличие пользователя в Moodle
             const response = await privateApi.get('/moodle/user', {
                 params: { email: kguEmail }
             });
 
             const data = response.data;
+
+            // Если Moodle вернул массив пользователей и он не пуст
             if (data.users && data.users.length > 0) {
-                setStatus({ type: 'success', message: `Успешно! Пользователь найден.` });
-                setTimeout(() => navigate('/profile'), 2000);
+                const moodleUser = data.users[0];
+
+                // Если пользователь найден, обновляем статус confirmed в нашей БД
+                if (user && user.id) {
+                    await privateApi.post('/database/update/User', {
+                        id: user.id,
+                        confirmed: true
+                    });
+                }
+
+                setStatus({ type: 'success', message: `Успешно! Пользователь ${moodleUser.fullname} найден. Аккаунт подтвержден.` });
+
+                // Редирект в профиль
+                setTimeout(() => navigate('/profile'), 1500);
             } else {
-                setStatus({ type: 'error', message: 'Пользователь не найден.' });
+                setStatus({ type: 'error', message: 'Пользователь с такой почтой не найден в системе СДО КГУ.' });
             }
 
         } catch (err) {
             console.error(err);
-            // Интерцептор обработает обновление токена, если нужно
             if (err.response && err.response.data && err.response.data.error) {
                 setStatus({ type: 'error', message: err.response.data.error });
             } else {
-                setStatus({ type: 'error', message: 'Ошибка сервера' });
+                setStatus({ type: 'error', message: 'Ошибка соединения с сервером.' });
             }
         } finally {
             setIsLoading(false);

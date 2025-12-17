@@ -34,19 +34,42 @@ const ProfilePage = () => {
 
     // --- Инициализация данных пользователя ---
     useEffect(() => {
-        if (user) {
-            // Базовые данные берем из токена
-            setUserInfo(prev => ({
-                ...prev,
-                login: user.email ? user.email.split('@')[0] : "user",
-                email: user.email || "",
-                role: user.role === 'admin' ? "Администратор" : "Пользователь",
+        const fetchUserData = async () => {
+            if (user) {
+                // 1. Устанавливаем базовые данные из токена/контекста (для быстрого отображения)
+                setUserInfo(prev => ({
+                    ...prev,
+                    login: user.email ? user.email.split('@')[0] : "user",
+                    email: user.email || "",
+                    role: user.role === 'admin' ? "Администратор" : "Пользователь",
+                }));
 
-                fullName: prev.fullName || "Иванов Иван Иванович",
-                phone: prev.phone || "+7 (999) 000-00-00",
-                department: "Факультет информационных технологий"
-            }));
-        }
+                try {
+                    //  Запрашиваем актуальные данные из БД, чтобы узнать статус подтверждения
+
+                    const response = await privateApi.post('/database/get/User', {
+                        id: user.id
+                    });
+
+                    // Предполагаем, что get возвращает массив. Берем первый элемент.
+                    // Если возвращает один объект, уберите [0]
+                    const userData = Array.isArray(response.data) ? response.data[0] : response.data;
+
+                    if (userData) {
+                        setUserInfo(prev => ({
+                            ...prev,
+                            fullName: userData.full_name || prev.fullName || "Иванов Иван Иванович",
+                            phone: userData.phone || prev.phone || "+7 (999) 000-00-00",
+                            isConfirmed: userData.confirmed || false // Получаем статус из БД
+                        }));
+                    }
+                } catch (error) {
+                    console.error("Ошибка получения данных пользователя:", error);
+                }
+            }
+        };
+
+        fetchUserData();
     }, [user]);
 
     // --- Логика Бронирований ---
@@ -140,29 +163,29 @@ const ProfilePage = () => {
             setSaveError(error);
             return;
         }
-
         setIsSaving(true);
         setSaveError('');
 
         try {
-            await privateApi.post('/user/update', {
-                user_id: user.id,
+            await privateApi.post('/database/update/User', {
+                id: user.id,
                 full_name: editForm.fullName,
                 phone: editForm.phone
             });
 
-            // Обновляем локальный стейт
             setUserInfo(prev => ({
                 ...prev,
                 fullName: editForm.fullName,
                 phone: editForm.phone
             }));
-
             setIsEditing(false);
-
         } catch (err) {
             console.error("Ошибка сохранения:", err);
-            setSaveError("Не удалось сохранить изменения. Попробуйте позже.");
+            if (err.response && err.response.data && err.response.data.error) {
+                setSaveError(err.response.data.error);
+            } else {
+                setSaveError("Не удалось сохранить изменения.");
+            }
         } finally {
             setIsSaving(false);
         }
@@ -173,41 +196,23 @@ const ProfilePage = () => {
         navigate('/login'); // logout делает reload, но на всякий случай
     };
 
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'confirmed': return 'status-confirmed';
-            case 'pending': return 'status-pending';
-            case 'rejected': return 'status-rejected';
-            default: return '';
-        }
-    };
-
-    const translateStatus = (status) => {
-        const map = {
-            'pending': 'На модерации',
-            'confirmed': 'Подтверждено',
-            'rejected': 'Отклонено'
-        };
-        return map[status] || status;
-    };
-
-    const toggleViewMode = () => {
-        setViewMode(viewMode === 'cards' ? 'table' : 'cards');
-    };
+    const getStatusColor = (s) => (s==='confirmed'?'status-confirmed':s==='pending'?'status-pending':'status-rejected');
+    const translateStatus = (s) => (s==='pending'?'На модерации':s==='confirmed'?'Подтверждено':s==='rejected'?'Отклонено':s);
+    const toggleViewMode = () => setViewMode(viewMode === 'cards' ? 'table' : 'cards');
 
     // Если пользователь не авторизован
-    if (!user) {
-        return (
-            <div className="profile-page">
-                <div style={{textAlign: 'center', marginTop: '50px'}}>
-                    <h2>Доступ запрещен</h2>
-                    <p>Пожалуйста, войдите в систему.</p>
-                    <button className="login-button" onClick={() => navigate('/login')} style={{marginTop: '20px'}}>
-                        Войти
-                    </button>
-                </div>
-            </div>
-        );
+     if (!user) {
+         return (
+             <div className="profile-page">
+                 <div style={{color: "black", textAlign: 'center', marginTop: '50px'}}>
+                     <h2>Доступ запрещен</h2>
+                     <p>Пожалуйста, войдите в систему.</p>
+                     <button className="login-button" onClick={() => navigate('/login')} style={{marginTop: '20px'}}>
+                         Войти
+                     </button>
+                 </div>
+             </div>
+         );
     }
 
     return (
