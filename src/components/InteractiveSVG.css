@@ -26,6 +26,12 @@
     stroke-width: 1px;
 }
 
+/* Эффект при наведении */
+.interactive-rect.rect-hover {
+    stroke: #1976d2;
+    stroke-width: 4px;
+}
+
 .filtered-in, .filtered-in * {
     fill: #4CAF50 !important;
     opacity: 1 !important;
@@ -53,8 +59,9 @@
 .interactive-rect.filtered-in:hover,
 .interactive-rect.filtered-in:hover * {
     fill: #66BB6A !important;
-    filter: brightness(1.1);
+    stroke-width: 4px;
 }
+
 
 .interactive-rect[title]:hover::after {
     content: attr(title);
@@ -67,6 +74,7 @@
     white-space: nowrap;
     z-index: 1000;
     pointer-events: none;
+    stroke-width: 4px;
     transform: translateY(-20px); /* Чуть выше курсора */
 }
 

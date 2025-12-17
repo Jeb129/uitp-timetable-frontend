@@ -10,6 +10,7 @@ const InteractiveSVG = ({
                         }) => {
     const [originalSvg, setOriginalSvg] = useState('');
     const [displaySvg, setDisplaySvg] = useState('');
+    const [hoveredRoom, setHoveredRoom] = useState(null); // Добавлено состояние для отслеживания наведения
 
     const containerRef = useRef(null);
 
@@ -32,7 +33,7 @@ const InteractiveSVG = ({
     // Хэш фильтров
     const filtersHash = filteredRooms.map(String).sort().join(',');
 
-    // 2. Парсинг и покраска (ОСТАВЛЯЕМ КАК БЫЛО)
+    // 2. Парсинг и покраска (с учетом hover)
     useEffect(() => {
         if (!originalSvg) return;
 
@@ -50,6 +51,7 @@ const InteractiveSVG = ({
 
             const isAllowed = allowedSet.has(rawId);
             const isSelected = (rawId === selectedId);
+            const isHovered = (rawId === hoveredRoom); // Проверка наведения
 
             const existingClass = el.getAttribute('class') || '';
             const isInteractive = existingClass.includes('interactive-rect') || isAllowed || isSelected;
@@ -65,9 +67,13 @@ const InteractiveSVG = ({
             }
 
             if (isSelected) {
-                // Если кликнули по серой, она станет цветной и выбранной
                 newClass = newClass.replace('filtered-out', 'filtered-in');
                 newClass += ' rect-selected';
+            }
+
+            // Добавление класса при наведении
+            if (isHovered) {
+                newClass += ' rect-hover';
             }
 
             el.setAttribute('class', newClass);
@@ -76,7 +82,7 @@ const InteractiveSVG = ({
         const serializer = new XMLSerializer();
         setDisplaySvg(serializer.serializeToString(doc));
 
-    }, [originalSvg, filtersHash, selectedRoom]);
+    }, [originalSvg, filtersHash, selectedRoom, hoveredRoom]);
 
     // ОБРАБОТЧИК КЛИКОВ
     useEffect(() => {
@@ -93,6 +99,33 @@ const InteractiveSVG = ({
         container.addEventListener('click', handleClick);
         return () => container.removeEventListener('click', handleClick);
     }, [displaySvg, onRoomClick]);
+
+    // ОБРАБОТЧИК НАВЕДЕНИЯ (ДОБАВЛЕНО)
+    useEffect(() => {
+        if (!containerRef.current) return;
+        const container = containerRef.current;
+
+        const handleMouseEnter = (e) => {
+            const target = e.target.closest('.interactive-rect');
+            if (target) {
+                setHoveredRoom(target.id);
+            }
+        };
+
+        const handleMouseLeave = (e) => {
+            if (e.target.closest('.interactive-rect')) {
+                setHoveredRoom(null);
+            }
+        };
+
+        container.addEventListener('mouseenter', handleMouseEnter, true);
+        container.addEventListener('mouseleave', handleMouseLeave, true);
+
+        return () => {
+            container.removeEventListener('mouseenter', handleMouseEnter, true);
+            container.removeEventListener('mouseleave', handleMouseLeave, true);
+        };
+    }, [displaySvg]);
 
     if (!displaySvg) return <div className="svg-loading">Загрузка...</div>;
 

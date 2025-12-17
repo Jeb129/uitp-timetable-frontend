@@ -1,5 +1,4 @@
-import { publicApi,privateApi } from './axios';
-
+import { publicApi,privateApi } from './axios.js';
 
 export const getObject = async (model_name, filters = {}) => {
   const response = await publicApi.post(`/database/get/${model_name}`, filters);

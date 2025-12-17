@@ -1,16 +1,18 @@
 // src/pages/MapPage.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import InteractiveSVG from '../components/InteractiveSVG';
+import ThreeDViewer from '../components/ThreeDViewer';
 import RoomModal from '../components/modals/RoomModal';
 import { useFilters } from '../contexts/FilterContext';
 import './MapPage.css';
 
 // Импортируем SVG файлы
-import Floor1_2D from '../assets/maps/1flor.svg';
-import Floor2_2D from '../assets/maps/2flor.svg';
-import Floor3_2D from '../assets/maps/3flor.svg';
-import Floor4_2D from '../assets/maps/4flor.svg';
+import Floor1_2D from '../assets/maps/1floor.svg';
+import Floor2_2D from '../assets/maps/2floor.svg';
+import Floor3_2D from '../assets/maps/3floor.svg';
+import Floor4_2D from '../assets/maps/4floor.svg';
 
+// Хардкод-данные для тестирования
 const getHardcodedRoomInfo = (roomId) => {
     const roomData = {
         '201': {
@@ -137,11 +139,6 @@ const MapPage = () => {
             }
         });
 
-        // В консоли браузера вы увидите этот массив.
-        // Если он пустой при смене мест -> проблема в фильтре checkRoomFilters
-        // Если он заполнен -> проблема в InteractiveSVG
-        console.log("Filtered Rooms Result:", filteredIds);
-
         return filteredIds;
     }, [filters]);
 
@@ -155,7 +152,6 @@ const MapPage = () => {
         const foundCount = getFilteredRooms.length;
 
         updateStats(foundCount, totalOnFloor);
-
     }, [getFilteredRooms, filters.floor, updateStats]);
 
     // Обновляем фильтр этажа
@@ -169,33 +165,61 @@ const MapPage = () => {
         setLoading(true);
         setError(null);
         try {
-
-            // Используем хардкод (функция теперь снаружи, доступна)
+            // Используем хардкод
             const hardcodedInfo = getHardcodedRoomInfo(roomId);
             setRoomInfo(hardcodedInfo);
             setIsRoomModalOpen(true);
         } catch (err) {
             console.error(err);
+            setError('Ошибка при загрузке данных аудитории');
         } finally {
             setLoading(false);
         }
     };
 
     const handleRoomClick = (roomId) => {
+        console.log('Клик по аудитории:', roomId);
         setSelectedRoom(roomId);
         fetchRoomInfo(roomId);
     };
 
     const handleBookRoom = async (roomId) => {
         // Логика бронирования
-        alert(`Бронирование ${roomId}`);
-        handleCloseModal();
+        try {
+            setLoading(true);
+            // Запрос на бронирование
+            const response = await fetch('/api/bookings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    roomId: roomId,
+                    date: new Date().toISOString().split('T')[0],
+                    timeSlot: '10:00-11:30'
+                })
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                alert(`Аудитория ${roomId} успешно забронирована!`);
+                handleCloseModal();
+            } else {
+                throw new Error('Ошибка бронирования');
+            }
+        } catch (err) {
+            console.error('Ошибка при бронировании:', err);
+            alert('Произошла ошибка при бронировании. Попробуйте позже.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleCloseModal = () => {
         setIsRoomModalOpen(false);
         setSelectedRoom(null);
         setRoomInfo(null);
+        setError(null);
     };
 
     const handleResetFilters = () => {
@@ -214,8 +238,18 @@ const MapPage = () => {
                 <div className="map-mode-controls">
                     <h3>Режим карты:</h3>
                     <div className="mode-buttons">
-                        <button className={`mode-btn ${mapMode === '2d' ? 'active' : ''}`} onClick={() => setMapMode('2d')}>2D</button>
-                        <button className={`mode-btn ${mapMode === '2.5d' ? 'active' : ''}`} onClick={() => setMapMode('2.5d')}>2.5D</button>
+                        <button
+                            className={`mode-btn ${mapMode === '2d' ? 'active' : ''}`}
+                            onClick={() => setMapMode('2d')}
+                        >
+                            2D План
+                        </button>
+                        <button
+                            className={`mode-btn ${mapMode === '2.5d' ? 'active' : ''}`}
+                            onClick={() => setMapMode('2.5d')}
+                        >
+                            3D Просмотр
+                        </button>
                     </div>
                 </div>
 
@@ -270,11 +304,20 @@ const MapPage = () => {
                         <span className="stats-text">
                             Показано: <strong>{getFilteredRooms.length}</strong>
                         </span>
-                        {/* Доп. статистика */}
                     </div>
                     {(filters.floor || filters.minCapacity > 0 || filters.roomType !== 'all' || filters.status !== 'all') && (
-                        <button className="reset-filters-btn" onClick={handleResetFilters}>Сбросить</button>
+                        <button className="reset-filters-btn" onClick={handleResetFilters}>
+                            Сбросить
+                        </button>
                     )}
+                </div>
+
+                <div className="map-status">
+                    <div className="status-badge">
+                        Этаж: {currentFloor} | Режим: {mapMode === '2d' ? '2D План' : '3D Просмотр'}
+                        {selectedRoom && ` | Выбрана: ${selectedRoom}`}
+                        {loading && ' | Загрузка...'}
+                    </div>
                 </div>
             </div>
 
@@ -291,6 +334,7 @@ const MapPage = () => {
                 </div>
             </div>
 
+            {/* Модальное окно с данными - ДОБАВЛЕНО ОБРАТНО */}
             <RoomModal
                 roomInfo={roomInfo}
                 isOpen={isRoomModalOpen}

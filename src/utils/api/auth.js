@@ -1,4 +1,4 @@
-import {privateApi, publicApi} from './apiClient';
+import {privateApi, publicApi} from './axios.js';
 
 export const login = async (username, password) => {
   const response = await publicApi.post('/auth/access/', { username, password });
