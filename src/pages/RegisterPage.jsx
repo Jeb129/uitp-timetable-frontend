@@ -27,6 +27,7 @@ const RegisterPage = () => {
 
         try {
             // Используем publicApi
+            // ЗАмени на метод register из auth.js - Илья
             await publicApi.post('/auth/register/', {
                 email: email,
                 password: password

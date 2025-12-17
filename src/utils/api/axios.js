@@ -4,7 +4,7 @@ import axios from 'axios';
 // Если вы используете Vite, то process.env недоступен. Нужно использовать import.meta.env.
 // Также, судя по вашему Python коду, пути начинаются сразу с /auth, а не /api/auth.
 // Поэтому я убрал /api из базового URL. Если у вас на бэке есть префикс /api, верните его.
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/";
 
 // Используется для запросов общей информации.
 export const publicApi = axios.create({
@@ -49,7 +49,7 @@ privateApi.interceptors.response.use(
                 if (!refreshToken) throw new Error('No refresh token');
 
                 // Запрос на обновление токена
-                const response = await publicApi.post('/auth/refresh/', {
+                const response = await publicApi.post('/auth/refresh', {
                     refresh: refreshToken
                 });
 
