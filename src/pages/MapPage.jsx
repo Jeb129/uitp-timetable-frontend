@@ -139,7 +139,6 @@ const MapPage = () => {
             }
         });
 
-        console.log("Filtered Rooms Result:", filteredIds);
         return filteredIds;
     }, [filters]);
 
@@ -324,23 +323,14 @@ const MapPage = () => {
 
             <div className="map-container">
                 <div className="map-content">
-                    {mapMode === '2d' ? (
-                        <InteractiveSVG
-                            svgUrl={currentSVG}
-                            onRoomClick={handleRoomClick}
-                            selectedRoom={selectedRoom}
-                            filteredRooms={getFilteredRooms}
-                            currentFloor={currentFloor}
-                        />
-                    ) : (
-                        <ThreeDViewer floor={currentFloor} />
-                    )}
-
-                    {loading && (
-                        <div className="loading-overlay">
-                            <div className="loading-spinner">Загрузка информации...</div>
-                        </div>
-                    )}
+                    <InteractiveSVG
+                        svgUrl={currentSVG}
+                        onRoomClick={handleRoomClick}
+                        selectedRoom={selectedRoom}
+                        filteredRooms={getFilteredRooms}
+                        currentFloor={currentFloor}
+                    />
+                    {/* Лоадеры и сообщения о пустых результатах */}
                 </div>
             </div>
 
