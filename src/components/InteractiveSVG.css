@@ -1,13 +1,18 @@
 .interactive-svg-container {
-    width: 100%;
-    height: 100%;
+    width: auto;
+    height: auto;
     position: relative;
 }
 
 .interactive-svg-container svg {
-    width: 100%;
-    height: 100%;
+    width: auto;
+    height: auto;
     display: block;
+}
+
+.svgclass {
+    transform: translate(10%, 10%); /* или нужные вам значения */
+    transform-origin: center;
 }
 
 .svg-loading {
