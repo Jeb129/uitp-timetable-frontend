@@ -29,13 +29,6 @@ const KGUConfirmPage = () => {
             if (data.users && data.users.length > 0) {
                 const moodleUser = data.users[0];
 
-                // Если пользователь найден, обновляем статус confirmed в нашей БД
-                if (user && user.id) {
-                    await privateApi.post('/database/update/User', {
-                        id: user.id,
-                        confirmed: true
-                    });
-                }
 
                 setStatus({ type: 'success', message: `Успешно! Пользователь ${moodleUser.fullname} найден. Аккаунт подтвержден.` });
 
