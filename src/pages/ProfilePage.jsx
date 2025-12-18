@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { privateApi } from '../utils/api/axios';
+import { logout as clearTokens } from '../utils/api/auth';
 import './ProfilePage.css';
 
 const ProfilePage = () => {
@@ -148,6 +149,7 @@ const ProfilePage = () => {
     }, [user, activeTab]);
 
     const handleLogout = () => {
+        clearTokens();
         logout();
         navigate('/login');
     };

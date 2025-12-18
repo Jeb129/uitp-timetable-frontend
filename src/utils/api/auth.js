@@ -13,7 +13,6 @@ export const login = async (email, password) => {
 export const logout = () => {
   localStorage.removeItem('access_token');
   localStorage.removeItem('refresh_token');
-  window.location.reload();
 };
 
 export const verifyToken = async () => {
