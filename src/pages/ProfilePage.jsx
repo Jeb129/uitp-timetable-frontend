@@ -276,12 +276,6 @@ const ProfilePage = () => {
                                                     <span className="booking-time">{booking.time}</span>
                                                 </div>
                                             </div>
-                                            <div className="booking-actions">
-                                                <button className="action-button view">Подробнее</button>
-                                                {booking.status === 'pending' && (
-                                                    <button className="action-button cancel">Отменить</button>
-                                                )}
-                                            </div>
                                         </div>
                                     ))}
                                 </div>
