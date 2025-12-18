@@ -154,7 +154,7 @@ const MapPage = () => {
         setLoading(true);
         setError(null);
         try {
-            // ВЕРНУЛ ЖЕСТКУЮ ПРИВЯЗКУ К КОРПУСУ "Б"
+            // Используем жесткую привязку к корпусу "Б"
             const dbNumberSearch = `Б-${svgId}`;
 
             const response = await publicApi.post('/database/get/Classroom', {
@@ -189,7 +189,9 @@ const MapPage = () => {
                     equipment: equipmentList,
                     status: 'свободна',
                     description: room.description || '',
-                    panorama: room.panorama_url || null,
+                    // ИЗМЕНЕНИЕ: Формируем ссылку на панораму на фронтенде
+                    // Убедитесь, что файлы лежат в папке public (или assets) по пути, который ожидает CylindricalPanorama
+                    panorama: `${svgId}.jpg`,
                     eios_id: room.eios_id
                 });
 
