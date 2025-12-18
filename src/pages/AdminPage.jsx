@@ -398,47 +398,33 @@ const AdminPage = () => {
                         </div>
                     )}
 
-                    {/*/!* --- TAB: USERS --- *!/*/}
-                    {/*{activeTab === 'users' && (*/}
-                    {/*    <div className="tab-panel">*/}
-                    {/*        <div className="table-header">*/}
-                    {/*            <h3>Управление пользователями</h3>*/}
-                    {/*            <div className="table-actions">*/}
-                    {/*                <button className="action-btn secondary" onClick={() => handleBulkAction('export')}>Экспорт</button>*/}
-                    {/*            </div>*/}
-                    {/*        </div>*/}
-                    {/*        <div className="table-container">*/}
-                    {/*            <table className="admin-table">*/}
-                    {/*                <thead>*/}
-                    {/*                <tr>*/}
-                    {/*                    <th><input type="checkbox" checked={selectedUsers.length === users.length && users.length > 0} onChange={handleSelectAll} /></th>*/}
-                    {/*                    <th>ID</th><th>Email</th><th>Роль</th><th>Подтверждение КГУ</th><th>Действия</th>*/}
-                    {/*                </tr>*/}
-                    {/*                </thead>*/}
-                    {/*                <tbody>*/}
-                    {/*                {users.map(user => (*/}
-                    {/*                    <tr key={user.id}>*/}
-                    {/*                        <td><input type="checkbox" checked={selectedUsers.includes(user.id)} onChange={() => handleUserSelect(user.id)} /></td>*/}
-                    {/*                        <td className="cell-id">#{user.id}</td>*/}
-                    {/*                        <td className="cell-email">{user.email}</td>*/}
-                    {/*                        <td className="cell-role">{getRoleText(user.role)}</td>*/}
-                    {/*                        <td className="cell-status">{getConfirmationBadge(user.confirmed)}</td>*/}
-                    {/*                        <td className="cell-actions">*/}
-                    {/*                            <div className="action-buttons">*/}
-                    {/*                                {user.confirmed ? (*/}
-                    {/*                                    <button className="btn-block" onClick={() => handleUserAction(user.id, 'revoke')}>Отменить</button>*/}
-                    {/*                                ) : (*/}
-                    {/*                                    <button className="btn-approve" onClick={() => handleUserAction(user.id, 'confirm')}>Подтвердить</button>*/}
-                    {/*                                )}*/}
-                    {/*                            </div>*/}
-                    {/*                        </td>*/}
-                    {/*                    </tr>*/}
-                    {/*                ))}*/}
-                    {/*                </tbody>*/}
-                    {/*            </table>*/}
-                    {/*        </div>*/}
-                    {/*    </div>*/}
-                    {/*)}*/}
+                    {/* --- TAB: USERS --- */}
+                    {activeTab === 'users' && (
+                        <div className="tab-panel">
+                            <div className="table-header">
+                                <h3>Управление пользователями</h3>
+                            </div>
+                            <div className="table-container">
+                                <table className="admin-table">
+                                    <thead>
+                                    <tr>
+                                        <th>ID</th><th>Email</th><th>Роль</th><th>Подтверждение КГУ</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {users.map(user => (
+                                        <tr key={user.id}>
+                                            <td className="cell-id">#{user.id}</td>
+                                            <td className="cell-email">{user.email}</td>
+                                            <td className="cell-role">{getRoleText(user.role)}</td>
+                                            <td className="cell-status">{getConfirmationBadge(user.confirmed)}</td>
+                                        </tr>
+                                    ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
 
                     {/* --- TAB: BOOKINGS --- */}
                     {activeTab === 'bookings' && (
