@@ -716,12 +716,6 @@ const AdminPage = () => {
                                                     >
                                                         Отклонить
                                                     </button>
-                                                    <button
-                                                        className="btn-details"
-                                                        onClick={() => handleViewBooking(booking)}
-                                                    >
-                                                        Подробнее
-                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>

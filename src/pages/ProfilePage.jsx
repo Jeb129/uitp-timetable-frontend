@@ -264,14 +264,6 @@ const ProfilePage = () => {
                                                             {booking.status}
                                                         </span>
                                                 </td>
-                                                <td>
-                                                    <div className="table-actions">
-                                                        <button className="action-button view">Подробнее</button>
-                                                        {booking.status === 'На модерации' && (
-                                                            <button className="action-button cancel">Отменить</button>
-                                                        )}
-                                                    </div>
-                                                </td>
                                             </tr>
                                         ))}
                                         </tbody>
