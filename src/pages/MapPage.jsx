@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import InteractiveSVG from '../components/InteractiveSVG';
+import ThreeDViewer from "../components/ThreeDViewer.jsx";
 import RoomModal from '../components/modals/RoomModal';
 import { useFilters } from '../contexts/FilterContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -20,7 +21,7 @@ const MapPage = () => {
 
     // UI стейты
     const [mapMode, setMapMode] = useState('2d');
-    const [selectedRoom, setSelectedRoom] = useState(null);
+    const [selectedRoom, setSelectedRoom] = useState(null); // Здесь хранится SVG ID (например, "101")
     const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
 
     // Данные аудитории
@@ -28,7 +29,7 @@ const MapPage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // Данные всех аудиторий (для фильтрации)
+    // Данные всех аудиторий (ключ - номер аудитории без буквы, значение - объект данных)
     const [allRoomsData, setAllRoomsData] = useState({});
 
     const { filters, updateFilter, updateStats } = useFilters();
@@ -39,30 +40,62 @@ const MapPage = () => {
         '2.5d': { 1: Floor1_2D, 2: Floor2_2D, 3: Floor3_2D, 4: Floor4_2D }
     };
 
+    // Хелпер: извлечение номера для SVG из номера в БД ("Б-101" -> "101")
+    const getSvgIdFromDbNumber = (dbNumber) => {
+        if (!dbNumber) return null;
+        // Ищем последовательность цифр. Например Б-101а -> 101
+        const match = dbNumber.match(/(\d+)/);
+        return match ? match[0] : null;
+    };
+
+    // Хелпер: определение этажа по номеру (101 -> 1, 205 -> 2)
+    const getFloorFromNumber = (numStr) => {
+        if (!numStr) return 1;
+        const match = numStr.match(/\d/);
+        return match ? parseInt(match[0]) : 1;
+    };
+
+    // Хелпер: определение типа
+    const getTypeFromData = (equipment, description) => {
+        const text = `${equipment} ${description}`.toLowerCase();
+        if (text.includes('компьютер') || text.includes('пк')) {
+            return 'computer';
+        }
+        return 'lecture';
+    };
+
     useEffect(() => {
         if (filters.floor && filters.floor !== '') {
             setCurrentFloor(Number(filters.floor));
         }
     }, [filters.floor]);
 
-    // Загрузка списка всех аудиторий для подсветки на карте
+    // Загрузка списка всех аудиторий для карты
     useEffect(() => {
         const fetchAllRooms = async () => {
             try {
-
+                // Запрашиваем все аудитории без фильтров
                 const response = await publicApi.post('/database/get/Classroom', {});
 
                 const roomsObj = {};
                 if (Array.isArray(response.data)) {
                     response.data.forEach(room => {
-                        const id = String(room.id || room.id);
-                        roomsObj[id] = {
-                            id: id,
-                            capacity: room.capacity,
-                            type: room.type,
-                            status: 'free',
-                            floor: room.floor
-                        };
+                        // room.number это "Б-101". Нам нужен ключ "101" для SVG
+                        const svgId = getSvgIdFromDbNumber(room.number);
+
+                        if (svgId) {
+                            const floor = getFloorFromNumber(svgId);
+                            const type = getTypeFromData(room.equipment, room.description);
+
+                            roomsObj[svgId] = {
+                                dbId: room.id, // Сохраняем реальный ID записи
+                                number: room.number, // "Б-101"
+                                capacity: room.capacity,
+                                type: type,
+                                status: 'free',
+                                floor: floor
+                            };
+                        }
                     });
                     setAllRoomsData(roomsObj);
                 }
@@ -73,7 +106,7 @@ const MapPage = () => {
         fetchAllRooms();
     }, []);
 
-    // 2. Логика фильтрации (без изменений)
+    // 2. Фильтрация
     const checkRoomFilters = (roomData, currentFilters) => {
         if (!roomData) return false;
 
@@ -96,14 +129,15 @@ const MapPage = () => {
 
     const getFilteredRooms = useMemo(() => {
         const filteredIds = [];
-        Object.keys(allRoomsData).forEach(roomId => {
-            if (checkRoomFilters(allRoomsData[roomId], filters)) {
-                filteredIds.push(roomId);
+        Object.keys(allRoomsData).forEach(svgId => {
+            if (checkRoomFilters(allRoomsData[svgId], filters)) {
+                filteredIds.push(svgId);
             }
         });
         return filteredIds;
     }, [filters, allRoomsData]);
 
+    // Статистика
     useEffect(() => {
         const roomsArray = Object.values(allRoomsData);
         const targetFloor = filters.floor ? filters.floor.toString() : '1';
@@ -117,19 +151,23 @@ const MapPage = () => {
         updateFilter('floor', floor.toString());
     };
 
-    // --- ЗАПРОС ИНФОРМАЦИИ ОБ АУДИТОРИИ ---
-    const fetchRoomInfo = async (id) => {
+    // --- ЗАПРОС ИНФОРМАЦИИ О КОНКРЕТНОЙ АУДИТОРИИ ---
+    const fetchRoomInfo = async (svgId) => {
         setLoading(true);
         setError(null);
         try {
+            // Формируем номер как в базе данных: "101" -> "Б-101"
+            const dbNumberSearch = `Б-${svgId}`;
+
+            // Делаем поиск по полю number
             const response = await publicApi.post('/database/get/Classroom', {
-                id: id
+                number: dbNumberSearch
             });
 
             const data = response.data;
             let room = null;
 
-            // Обрабатываем ответ: может быть массив объектов или один объект
+            // Бэк может вернуть массив найденных записей
             if (Array.isArray(data) && data.length > 0) {
                 room = data[0];
             } else if (data && !Array.isArray(data) && data.id) {
@@ -138,30 +176,31 @@ const MapPage = () => {
 
             if (room) {
                 // Парсим оборудование
-                let equipmentList = ['Базовое оборудование'];
+                let equipmentList = [];
                 if (room.equipment) {
-                    if (Array.isArray(room.equipment)) {
-                        equipmentList = room.equipment;
-                    } else if (typeof room.equipment === 'string') {
-                        equipmentList = room.equipment.split(',').map(item => item.trim());
-                    }
+                    equipmentList = room.equipment.split(',').map(item => item.trim());
+                } else {
+                    equipmentList = ['Базовое оборудование'];
                 }
+
+                const roomType = getTypeFromData(room.equipment, room.description);
 
                 setRoomInfo({
                     id: room.id,
-                    name: `Аудитория ${room.id}`,
-                    type: room.type || 'Учебная',
+                    name: room.number,    // "Б-101"
+                    svgId: svgId,         // "101"
+                    type: roomType === 'computer' ? 'Компьютерный класс' : 'Лекционная',
                     capacity: room.capacity || 0,
                     equipment: equipmentList,
                     status: 'свободна',
                     description: room.description || '',
                     panorama: room.panorama_url || null,
-                    floor: room.floor
+                    eios_id: room.eios_id
                 });
 
                 setIsRoomModalOpen(true);
             } else {
-                setError(`Информация об аудитории ${id} не найдена в базе данных.`);
+                setError(`Аудитория ${dbNumberSearch} не найдена в базе данных.`);
                 setIsRoomModalOpen(true);
             }
 
@@ -174,9 +213,9 @@ const MapPage = () => {
         }
     };
 
-    const handleRoomClick = (roomId) => {
-        setSelectedRoom(roomId);
-        fetchRoomInfo(roomId);
+    const handleRoomClick = (svgId) => {
+        setSelectedRoom(svgId);
+        fetchRoomInfo(svgId);
     };
 
     // --- ПАРСИНГ ВРЕМЕНИ ---
@@ -199,7 +238,13 @@ const MapPage = () => {
     };
 
     // --- БРОНИРОВАНИЕ ---
-    const handleBookRoom = async (roomId) => {
+    const handleBookRoom = async () => {
+        // roomInfo.id содержит реальный ID записи из БД, который мы загрузили в fetchRoomInfo
+        if (!roomInfo || !roomInfo.id) {
+            alert("Ошибка: Не выбрана аудитория или отсутствуют данные");
+            return;
+        }
+
         if (!user) {
             alert("Для бронирования необходимо авторизоваться");
             navigate('/login');
@@ -209,8 +254,7 @@ const MapPage = () => {
         const selectedTimeStr = filters.time;
 
         if (!selectedTimeStr) {
-            alert("Пожалуйста, выберите время бронирования в верхней панели (кнопка 'Время').");
-            setIsRoomModalOpen(false);
+            alert("Пожалуйста, выберите время бронирования в верхней панели.");
             return;
         }
 
@@ -232,8 +276,9 @@ const MapPage = () => {
 
             const isoDate = bookingDate.toISOString().split('.')[0];
 
+            // Отправляем ID записи (Integer)
             await privateApi.post('/booking/create', {
-                classroom_number: roomId,
+                classroom_number: roomInfo.id, // Бэкенд ждет ID записи здесь
                 date: isoDate,
                 duration: timeData.duration,
                 user_id: user.id
@@ -241,7 +286,7 @@ const MapPage = () => {
 
             const displayDate = bookingDate.toLocaleDateString();
 
-            alert(`Заявка успешно создана!\nАудитория: ${roomId}\nДата: ${displayDate}\nВремя: ${selectedTimeStr}`);
+            alert(`Заявка успешно создана!\nАудитория: ${roomInfo.name}\nДата: ${displayDate}\nВремя: ${selectedTimeStr}`);
             handleCloseModal();
 
         } catch (err) {
@@ -337,7 +382,7 @@ const MapPage = () => {
                 roomInfo={roomInfo}
                 isOpen={isRoomModalOpen}
                 onClose={handleCloseModal}
-                onBook={handleBookRoom}
+                onBook={handleBookRoom} // Передаем функцию без аргументов, так как ID уже в roomInfo
                 loading={loading}
                 error={error}
             />
