@@ -1,32 +1,15 @@
-import { useState } from "react";
-import ClassroomList from "../components/schedule/ClassroomList";
-import ClassroomCalendar from "../components/schedule/ClassroomCalendar";
+import React, { useEffect } from 'react';
 
-export default function SchedulePage() {
-  const [selectedClassroom, setSelectedClassroom] = useState(null);
+const SchedulePage = () => {
+    useEffect(() => {
+        window.open("https://eios.kosgos.ru/WebApp/#/Rasp/", "_blank");
+    }, []);
 
-  return (
-    <div style={{ display: "flex", height: "100%" }}>
-      
-      {/* Левая колонка */}
-      <div style={{ width: 280, borderRight: "1px solid #e5e7eb" }}>
-        <ClassroomList 
-            onSelect={setSelectedClassroom}
-            selectedId={selectedClassroom?.id}
-        />
-      </div>
+    return (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '50px' }}>
+            <p>Перенаправление на сайт расписания...</p>
+        </div>
+    );
+};
 
-      {/* Правая часть */}
-      <div style={{ flex: 1, padding: 16 }}>
-        {!selectedClassroom ? (
-          <div style={{ color: "#6b7280", fontSize: 18 }}>
-            Выберите аудиторию
-          </div>
-        ) : (
-          <ClassroomCalendar classroom={selectedClassroom} />
-        )}
-      </div>
-
-    </div>
-  );
-}
+export default SchedulePage;

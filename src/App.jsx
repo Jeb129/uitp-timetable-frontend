@@ -5,7 +5,6 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AppLayout from './components/AppLayout';
 import CalendarPage from './pages/CalendarPage';
 import MapPage from './pages/MapPage';
-import AuditoriumsPage from './pages/AuditoriumsPage';
 import SchedulePage from './pages/SchedulePage';
 import KGUPage from './pages/KGUPage';
 import ProfilePage from './pages/ProfilePage.jsx';
@@ -63,11 +62,6 @@ const AppContent = () => {
                     <AppLayout>
                         <MapPage />
                     </AppLayout>
-            } />
-            <Route path="/auditoriums" element={
-                <AppLayout>
-                    <AuditoriumsPage />
-                </AppLayout>
             } />
             <Route path="/schedule" element={
                 <AppLayout>

@@ -3,7 +3,6 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import CalendarIcon from './icons/sidebar/CalendarIcon.jsx';
 import MapIcon from './icons/sidebar/MapIcon.jsx';
-import AuditoriumIcon from './icons/sidebar/AuditoriumIcon.jsx';
 import ScheduleIcon from './icons/sidebar/ScheduleIcon.jsx';
 import KGUIcon from './icons/sidebar/KGUIcon.jsx';
 import RulesIcon from './icons/sidebar/RulesIcon.jsx';
@@ -23,7 +22,6 @@ const Sidebar = () => {
     const menuItems = [
         { path: '/calendar', icon: <CalendarIcon />, label: 'Календарь' },
         { path: '/map', icon: <MapIcon />, label: 'Карта' },
-        { path: '/auditoriums', icon: <AuditoriumIcon />, label: 'Аудитория' },
         { path: '/schedule', icon: <ScheduleIcon />, label: 'Расписание' },
         { path: '/kgu', icon: <KGUIcon />, label: 'КГУ' },
         { path: '/rules', icon: <RulesIcon />, label: 'Правила' },
