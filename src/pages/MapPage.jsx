@@ -54,30 +54,18 @@ const MapPage = () => {
         return match ? parseInt(match[0]) : 1;
     };
 
-    // --- ОБНОВЛЕННАЯ ЛОГИКА ТИПОВ ---
+    // --- ЛОГИКА ТИПОВ ---
     const getTypeFromData = (equipment, description) => {
-        // Приводим к нижнему регистру для поиска
         const text = `${equipment || ''} ${description || ''}`.toLowerCase();
 
         if (text.includes('компьютер') || text.includes('пк') || text.includes('моноблок') || text.includes('ноутбук')) {
             return 'computer';
         }
 
-
         const otherKeywords = [
-            'лаборатор',
-            'спорт',
-            'читальн',
-            'библиотек',
-            'деканат',
-            'кафедра',
-            'преподавател',
-            'архив',
-            'сервер',
-            'склад',
-            'туалет',
-            'буфет',
-            'гардероб'
+            'лаборатор', 'спорт', 'читальн', 'библиотек', 'деканат',
+            'кафедра', 'преподавател', 'архив', 'сервер', 'склад',
+            'туалет', 'буфет', 'гардероб'
         ];
 
         if (otherKeywords.some(keyword => text.includes(keyword))) {
@@ -87,7 +75,6 @@ const MapPage = () => {
         return 'lecture';
     };
 
-    // Вспомогательная функция для отображения названия типа на русском
     const getRoomTypeLabel = (type) => {
         switch (type) {
             case 'computer': return 'Компьютерный класс';
@@ -106,6 +93,28 @@ const MapPage = () => {
         const minutes = pad(date.getMinutes());
         const seconds = '00';
         return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+    };
+
+    // --- ПАРСИНГ SQL ДАТЫ ---
+    // Преобразует строку "2025-12-17 01:38:31.951231" в Date объект
+    // Гарантированно используя локальное время (как и фильтры пользователя)
+    const parseSQLDate = (sqlDateStr) => {
+        if (!sqlDateStr) return new Date(0); // Возвращаем старую дату при ошибке
+
+        try {
+            // Разделяем дату и время (игнорируем миллисекунды для простоты сравнения)
+            const [datePart, timePartFull] = sqlDateStr.split(' ');
+            if (!datePart || !timePartFull) return new Date(sqlDateStr); // Fallback на стандартный парсер
+
+            const [year, month, day] = datePart.split('-').map(Number);
+            const [hour, minute, second] = timePartFull.split('.')[0].split(':').map(Number);
+
+            // Создаем дату в локальном часовом поясе пользователя
+            return new Date(year, month - 1, day, hour, minute, second);
+        } catch (e) {
+            console.error("Ошибка ручного парсинга даты:", sqlDateStr, e);
+            return new Date(sqlDateStr);
+        }
     };
 
     useEffect(() => {
@@ -168,6 +177,7 @@ const MapPage = () => {
             const [startH, startM] = startStr.split(':').map(Number);
             const [endH, endM] = endStr.split(':').map(Number);
             const [year, month, day] = dateStr.split('-').map(Number);
+            // Создаем объекты Date в локальном времени
             const filterStart = new Date(year, month - 1, day, startH, startM, 0);
             const filterEnd = new Date(year, month - 1, day, endH, endM, 0);
             return { start: filterStart, end: filterEnd };
@@ -177,6 +187,7 @@ const MapPage = () => {
         }
     };
 
+    // --- ГЛАВНАЯ ФУНКЦИЯ ФИЛЬТРАЦИИ ---
     const checkRoomFilters = (roomData, currentFilters, activeBookings) => {
         if (!roomData) return false;
 
@@ -188,22 +199,38 @@ const MapPage = () => {
         const roomCap = parseInt(roomData.capacity, 10);
         if (!isNaN(filterCap) && filterCap > 0 && roomCap < filterCap) return false;
 
-        // Фильтр по типу (Обновлен)
+        // Фильтр по типу
         if (currentFilters.roomType && currentFilters.roomType !== 'all') {
             if (roomData.type !== currentFilters.roomType) return false;
         }
 
-        // Фильтр по времени (Занятость)
+        // --- Фильтр по времени (Занятость) ---
         if (currentFilters.time && currentFilters.date) {
             const range = getFilterDateRange(currentFilters.date, currentFilters.time);
+
             if (range) {
+                // Проверяем, есть ли пересечение интервалов
                 const isOccupied = activeBookings.some(booking => {
-                    if (booking.classroom_id !== roomData.dbId) return false;
+                    // 1. Сравниваем ID. Приводим к строке для безопасности (API отдает int, roomData.dbId может быть int/string)
+                    if (String(booking.classroom_id) !== String(roomData.dbId)) return false;
+
+                    // 2. Пропускаем только ОТКЛОНЕННЫЕ заявки (false).
+                    // status: true (одобрено) - ЗАНЯТО
+                    // status: null (на рассмотрении) - ЗАНЯТО (блокируем слот пока рассматриваем)
                     if (booking.status === false) return false;
-                    const bookingStart = new Date(booking.date_start);
-                    const bookingEnd = new Date(booking.date_end);
-                    return (bookingStart < range.end) && (bookingEnd > range.start);
+
+                    // 3. Парсим даты из БД специальной функцией
+                    const bookingStart = parseSQLDate(booking.date_start);
+                    const bookingEnd = parseSQLDate(booking.date_end);
+
+                    // 4. Логика пересечения интервалов:
+                    // (StartA < EndB) && (EndA > StartB)
+                    const isIntersecting = (bookingStart < range.end) && (bookingEnd > range.start);
+
+                    return isIntersecting;
                 });
+
+                // Если аудитория занята (есть пересечение), фильтруем её (возвращаем false)
                 if (isOccupied) return false;
             }
         }
@@ -259,7 +286,6 @@ const MapPage = () => {
                     equipmentList = ['Базовое оборудование'];
                 }
 
-                // Определяем тип с помощью новой функции
                 const typeCode = getTypeFromData(room.equipment, room.description);
                 const typeLabel = getRoomTypeLabel(typeCode);
 
@@ -267,7 +293,7 @@ const MapPage = () => {
                     id: room.id,
                     name: room.number,
                     svgId: svgId,
-                    type: typeLabel, // Используем красивое название
+                    type: typeLabel,
                     capacity: room.capacity || 0,
                     equipment: equipmentList,
                     status: 'свободна',
@@ -356,6 +382,7 @@ const MapPage = () => {
             const displayDate = startDate.toLocaleDateString();
             alert(`Заявка успешно создана!\nАудитория: ${roomInfo.name}\nДата: ${displayDate}\nВремя: ${filters.time}`);
 
+            // Обновляем список бронирований
             const response = await privateApi.post('/database/get/Booking', {});
             const data = Array.isArray(response.data) ? response.data : (response.data?.results || []);
             setBookings(data);
