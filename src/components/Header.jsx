@@ -144,6 +144,7 @@ const Header = () => {
         const isValidTime = availableTimes.some(time => time.value === timeRange);
         if (isValidTime) {
             setSelectedTime(timeRange);
+            updateFilter('time', timeRange);
         } else {
             console.warn('Выбранное время недоступно для вашего типа пользователя');
             if (availableTimes.length > 0) {
