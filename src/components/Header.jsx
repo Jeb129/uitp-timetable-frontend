@@ -1,5 +1,5 @@
 // src/components/Header.jsx
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useCallback} from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { privateApi } from '../utils/api/axios';
@@ -7,7 +7,6 @@ import { privateApi } from '../utils/api/axios';
 import BellIcon from './icons/header/BellIcon';
 import ProfileIcon from './icons/header/ProfileIcon';
 import HelpIcon from './icons/header/HelpIcon';
-import CheckIcon from './icons/header/CheckIcon';
 import RulesModal from './modals/RulesModal.jsx';
 import TimeRangeModal from './modals/TimeRangeModal.jsx';
 import './Header.css';
@@ -54,40 +53,57 @@ const Header = () => {
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // --- ЛОГИКА УВЕДОМЛЕНИЙ ---
-    useEffect(() => {
-        const fetchNotifications = async () => {
-            if (user) {
-                try {
-                    const response = await privateApi.get('/notifications/');
-                    const mappedNotifications = response.data.map(n => ({
-                        id: n.id,
-                        text: n.message || 'Без текста',
-                        time: formatRelativeTime(n.created_at || n.date),
-                        read: n.is_read || false
-                    }));
-                    setNotifications(mappedNotifications.reverse());
-                } catch (error) {
-                    console.error("Ошибка получения уведомлений:", error);
-                }
-            } else {
-                setNotifications([]);
-            }
-        };
-        fetchNotifications();
+
+    // Функция загрузки уведомлений
+    const loadNotifications = useCallback(async () => {
+        if (!user) return;
+        try {
+            // Используем универсальный эндпоинт для получения уведомлений
+            const response = await privateApi.post('/database/get/Notification', {
+                filters: {
+                    user_id: user.id, // Получаем только уведомления текущего пользователя
+                },
+                sort_by: 'created_at', // Сортируем по дате создания
+                sort_order: 'desc' // Новые первыми
+            });
+
+            // Обрабатываем ответ
+            const data = response.data?.results || response.data || [];
+            const notificationsArray = Array.isArray(data) ? data : [data];
+
+            const mappedNotifications = notificationsArray.map(n => ({
+                id: n.id,
+                text: n.message || 'Без текста',
+                time: formatRelativeTime(n.created_at),
+                read: n.is_read || false // Предполагаем, что есть поле is_read
+            }));
+
+            setNotifications(mappedNotifications);
+        } catch (error) {
+            console.error("Ошибка получения уведомлений:", error);
+            setNotifications([]);
+        }
     }, [user]);
 
-    const toggleReadStatus = async (id) => {
-        setNotifications(notifications.map(not =>
-            not.id === id ? { ...not, read: !not.read } : not
-        ));
-        if (user) {
-            try {
-                await privateApi.post('/notifications/read', { id });
-            } catch (error) {
-                console.error("Не удалось обновить статус уведомления", error);
-            }
+    // Загружаем уведомления при входе (чтобы показать красную точку)
+    useEffect(() => {
+        loadNotifications();
+    }, [loadNotifications]);
+
+    // Обновленная функция клика по колокольчику
+    const toggleNotifications = () => {
+        const newState = !showNotifications;
+        setShowNotifications(newState);
+
+        // Если открываем окно - обновляем данные
+        if (newState) {
+            loadNotifications();
         }
     };
+
+    // Считаем непрочитанные для бейджика
+    const unreadCount = notifications.filter(n => !n.read).length;
+
     // --- КОНЕЦ ЛОГИКИ УВЕДОМЛЕНИЙ ---
 
     useEffect(() => {
@@ -99,8 +115,6 @@ const Header = () => {
             }
         }
     }, [userType, isMapPage, filters.time]);
-
-    const toggleNotifications = () => setShowNotifications(!showNotifications);
 
     const goToProfileOrLogin = () => {
         if (user) {
@@ -148,8 +162,6 @@ const Header = () => {
     const handleFloorChange = (e) => updateFilter('floor', e.target.value);
     const handleCorpusChange = (e) => updateFilter('corpus', e.target.value);
 
-    const unreadCount = notifications.filter(n => !n.read).length;
-
     return (
         <>
             <header className="header">
@@ -190,7 +202,7 @@ const Header = () => {
                                         <ul className="notification-list">
                                             {notifications.length === 0 ? (
                                                 <li className="notification-item" style={{justifyContent: 'center', color: '#888'}}>
-                                                    Нет новых уведомлений
+                                                    Нет уведомлений
                                                 </li>
                                             ) : (
                                                 notifications.map((not) => (
@@ -199,12 +211,6 @@ const Header = () => {
                                                             <p>{not.text}</p>
                                                             <span className="notification-time">{not.time}</span>
                                                         </div>
-                                                        <button
-                                                            className={`read-button ${not.read ? 'read' : ''}`}
-                                                            onClick={() => toggleReadStatus(not.id)}
-                                                        >
-                                                            <CheckIcon />
-                                                        </button>
                                                     </li>
                                                 ))
                                             )}
@@ -262,7 +268,7 @@ const Header = () => {
                                     value={filters.date || today}
                                     onChange={handleDateChange}
                                     min={today}
-                                    className="date-input" // Добавьте стили в Header.css если нужно (обычный input)
+                                    className="date-input"
                                     style={{
                                         padding: '6px',
                                         border: '1px solid #ddd',
