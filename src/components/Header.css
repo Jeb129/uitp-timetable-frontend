@@ -280,7 +280,7 @@
 
 .time-range-btn:hover {
     border-color: var(--accent-secondary);
-    background: var(--bg-primary);
+    background: var(--bg-secondary);
 }
 
 .time-range-btn:focus {
