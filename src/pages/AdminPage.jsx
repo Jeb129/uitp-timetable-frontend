@@ -1,4 +1,3 @@
-// src/pages/AdminPage.jsx
 import React, { useState, useEffect } from 'react';
 import './AdminPage.css';
 import BookingDetailsModal from '../components/modals/BookingDetailsModal.jsx';
@@ -14,60 +13,34 @@ const AdminPage = () => {
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [showBookingModal, setShowBookingModal] = useState(false);
 
-    // Данные для таблиц
+    // Данные
     const [users, setUsers] = useState([]);
     const [bookings, setBookings] = useState([]);
 
-    // --- ХАРДКОДНЫЕ ДАННЫЕ ДЛЯ ГРАФИКОВ (ЧТОБЫ БЫЛО КРАСИВО) ---
+    // Статистика для карточек
+    const [statistics, setStatistics] = useState({
+        totalUsers: 0, activeUsers: 0, pendingUsers: 0, blockedUsers: 0,
+        totalBookings: 0, pendingModeration: 0, approvedBookings: 0, rejectedBookings: 0,
+        totalRevenue: 0,
+        roomsAvailable: 0, occupiedRooms: 0, popularRoom: '-'
+    });
+
+    // Хардкодные данные для графиков (визуализация)
     const mockChartData = {
-        users: [
-            { id: 1, role: 'student', status: 'active' },
-            { id: 2, role: 'external', status: 'active' },
-            { id: 3, role: 'employee', status: 'active' },
-            { id: 4, role: 'student', status: 'active' },
-            { id: 5, role: 'student', status: 'active' }
-        ],
-        bookings: [
-            // Фейковые данные для графика активности по месяцам/дням
-            { date: '2024-01-01', status: 'approved' },
-            { date: '2024-01-02', status: 'approved' }
-        ],
-        // Специфичные данные, которые может ожидать компонент AdminCharts
+        users: users, // Передаем реальных пользователей для графиков, если компонент поддерживает
+        bookings: bookings, // Передаем реальные бронирования
+        // Заглушки для специфичных графиков, если данных мало
         revenueData: [
-            { name: 'Янв', value: 4000 },
-            { name: 'Фев', value: 3000 },
-            { name: 'Мар', value: 2000 },
-            { name: 'Апр', value: 2780 },
-            { name: 'Май', value: 1890 },
-            { name: 'Июн', value: 2390 },
+            { name: 'Янв', value: 4000 }, { name: 'Фев', value: 3000 },
+            { name: 'Мар', value: 2000 }, { name: 'Апр', value: 2780 },
+            { name: 'Май', value: 1890 }, { name: 'Июн', value: 2390 },
         ],
         statusDistribution: [
-            { name: 'Подтверждено', value: 400 },
-            { name: 'Отклонено', value: 300 },
-            { name: 'На проверке', value: 300 },
+            { name: 'Подтверждено', value: bookings.filter(b => b.status === 'approved').length },
+            { name: 'Отклонено', value: bookings.filter(b => b.status === 'rejected').length },
+            { name: 'На проверке', value: bookings.filter(b => b.status === 'pending').length },
         ]
     };
-
-    // --- РЕАЛЬНАЯ СТАТИСТИКА (ДЛЯ КАРТОЧЕК) ---
-    const [statistics, setStatistics] = useState({
-        // Пользователи
-        totalUsers: 0,
-        activeUsers: 0,
-        pendingUsers: 0,
-        blockedUsers: 0,
-
-        // Бронирования
-        totalBookings: 0,
-        pendingModeration: 0,
-        approvedBookings: 0,
-        rejectedBookings: 0,
-        totalRevenue: 0, // Новое поле из classroom/statistics
-
-        // Аудитории
-        roomsAvailable: 0, // Можно подгрузить count(Classroom)
-        occupiedRooms: 0,
-        popularRoom: '-' // Берем из classroom/statistics
-    });
 
     // --- ЗАГРУЗКА ДАННЫХ ---
     useEffect(() => {
@@ -100,45 +73,49 @@ const AdminPage = () => {
         }
     };
 
-    // --- 1. ЛОГИКА СТАТИСТИКИ (СМЕШАННАЯ) ---
+    // --- 1. ЛОГИКА СТАТИСТИКИ ---
     const fetchStatistics = async () => {
         try {
-            // Запускаем запросы параллельно
+            // Выполняем запросы параллельно
             const [usersRes, bookingsRes, classroomsRes, statsRes] = await Promise.all([
-                privateApi.post('/database/get/User', {}),     // Все юзеры
-                privateApi.post('/database/get/Booking', {}),  // Все брони
-                privateApi.post('/database/get/Classroom', {}), // Все аудитории (для кол-ва)
-                privateApi.get('/classroom/statistics')        // Спец. статистика выручки
+                privateApi.post('/database/get/User', {}),
+                privateApi.post('/database/get/Booking', {}),
+                privateApi.post('/database/get/Classroom', {}),
+                privateApi.get('/classroom/statistics')
             ]);
 
-            const usersData = Array.isArray(usersRes.data) ? usersRes.data : [usersRes.data];
-            const bookingsData = Array.isArray(bookingsRes.data) ? bookingsRes.data : [bookingsRes.data];
-            const classroomsData = Array.isArray(classroomsRes.data) ? classroomsRes.data : [classroomsRes.data];
+            const normalizeData = (data) => {
+                if (!data) return [];
+                return Array.isArray(data) ? data : [data];
+            };
 
-            // Обработка данных Users
+            const usersData = normalizeData(usersRes.data);
+            const bookingsData = normalizeData(bookingsRes.data);
+            const classroomsData = normalizeData(classroomsRes.data);
+
+            // --- Подсчет пользователей ---
             const totalUsers = usersData.length;
-            // В модели User поле confirmed (bool).
-            // Допустим: active = confirmed=true, pending = confirmed=false
-            const activeUsers = usersData.filter(u => u.confirmed).length;
-            const pendingUsers = usersData.filter(u => !u.confirmed).length;
-            const blockedUsers = 0; // В текущей модели нет поля blocked
+            const activeUsers = usersData.filter(u => u.confirmed === true).length;
+            const pendingUsers = usersData.filter(u => u.confirmed === false).length;
+            const blockedUsers = 0; // Нет поля blocked в модели
 
-            // Обработка данных Bookings (статусы)
+            // --- Подсчет бронирований ---
             const totalBookings = bookingsData.length;
+            // Модерация (status: null)
             const pendingModeration = bookingsData.filter(b => b.status === null).length;
+            // Одобрено (status: true)
             const approvedBookings = bookingsData.filter(b => b.status === true).length;
+            // Отклонено (status: false)
             const rejectedBookings = bookingsData.filter(b => b.status === false).length;
 
-            // Обработка данных из classrooms.py (Statistics)
-            // { success: true, statistics: { top_profitable_classrooms: [], total_revenue_all: ... } }
+            // --- Финансы и Аудитории (из statsRes) ---
             const apiStats = statsRes.data.success ? statsRes.data.statistics : {};
             const totalRevenue = apiStats.total_revenue_all || 0;
-
-            // Самая популярная/прибыльная аудитория
             const popularRoom = (apiStats.top_profitable_classrooms && apiStats.top_profitable_classrooms.length > 0)
                 ? apiStats.top_profitable_classrooms[0].classroom_number
                 : '-';
 
+            // Обновляем стейт
             setStatistics({
                 totalUsers,
                 activeUsers,
@@ -152,13 +129,13 @@ const AdminPage = () => {
                 totalRevenue,
 
                 roomsAvailable: classroomsData.length,
-                occupiedRooms: 0, // Сложно посчитать "прямо сейчас" без доп логики, оставим 0
+                occupiedRooms: 0,
                 popularRoom
             });
 
         } catch (err) {
             console.error("Ошибка загрузки статистики:", err);
-            // Не блокируем экран ошибкой, просто в консоль
+            // Не блокируем UI ошибкой, так как это сводная информация
         }
     };
 
@@ -166,7 +143,7 @@ const AdminPage = () => {
     const fetchUsers = async () => {
         try {
             const response = await privateApi.post('/database/get/User', {});
-            const data = Array.isArray(response.data) ? response.data : [response.data];
+            const data = Array.isArray(response.data) ? response.data : (response.data ? [response.data] : []);
             data.sort((a, b) => a.id - b.id);
             setUsers(data);
         } catch (err) {
@@ -197,16 +174,18 @@ const AdminPage = () => {
     // --- API: БРОНИРОВАНИЯ ---
     const fetchBookings = async () => {
         try {
+            // 1. Бронирования
             const bookingsRes = await privateApi.post('/database/get/Booking', {});
-            const rawBookings = Array.isArray(bookingsRes.data) ? bookingsRes.data : [bookingsRes.data];
+            const rawBookings = Array.isArray(bookingsRes.data) ? bookingsRes.data : (bookingsRes.data ? [bookingsRes.data] : []);
 
+            // 2. Справочники
             const [usersRes, roomsRes] = await Promise.all([
                 privateApi.post('/database/get/User', {}),
                 privateApi.post('/database/get/Classroom', {})
             ]);
 
-            const allUsers = Array.isArray(usersRes.data) ? usersRes.data : [usersRes.data];
-            const allRooms = Array.isArray(roomsRes.data) ? roomsRes.data : [roomsRes.data];
+            const allUsers = Array.isArray(usersRes.data) ? usersRes.data : (usersRes.data ? [usersRes.data] : []);
+            const allRooms = Array.isArray(roomsRes.data) ? roomsRes.data : (roomsRes.data ? [roomsRes.data] : []);
 
             const usersMap = {};
             allUsers.forEach(u => usersMap[u.id] = u.email);
@@ -225,10 +204,10 @@ const AdminPage = () => {
                 return {
                     id: b.id,
                     userEmail: usersMap[b.user_id] || `ID: ${b.user_id}`,
-                    room: roomsMap[b.classroom_id] ? `Ауд. ${roomsMap[b.classroom_id]}` : `Room ID: ${b.classroom_id}`,
+                    room: roomsMap[b.classroom_id] ? `Ауд. ${roomsMap[b.classroom_id]}` : `ID: ${b.classroom_id}`,
                     date: startDate.toLocaleDateString('ru-RU'),
-                    startTime: startDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-                    endTime: endDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    startTime: startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    endTime: endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                     status: statusStr,
                     rawStatus: b.status,
                     description: b.description || 'Нет описания',
@@ -270,7 +249,7 @@ const AdminPage = () => {
         }
     };
 
-    // --- UI HELPERS ---
+    // --- UI ---
     const handleViewBooking = (booking) => {
         setSelectedBooking(booking);
         setShowBookingModal(true);
@@ -292,7 +271,7 @@ const AdminPage = () => {
     };
 
     const handleBulkAction = (action) => alert("В разработке");
-    const handleUserSelect = (id) => setSelectedUsers(prev => prev.includes(id) ? prev.filter(x => x!==id) : [...prev, id]);
+    const handleUserSelect = (id) => setSelectedUsers(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
     const handleSelectAll = () => setSelectedUsers(selectedUsers.length === users.length ? [] : users.map(u => u.id));
 
     const getStatusBadge = (status) => {
@@ -306,9 +285,9 @@ const AdminPage = () => {
 
     const getConfirmationBadge = (isConfirmed) => isConfirmed
         ? <span className="status-badge status-approved">Подтвержден</span>
-        : <span className="status-badge status-pending" style={{background:'#e9ecef',color:'#495057'}}>Нет</span>;
+        : <span className="status-badge status-pending" style={{ background: '#e9ecef', color: '#495057' }}>Нет</span>;
 
-    const getRoleText = (r) => ({user:'Пользователь', kgu:'Сотрудник/Студент', admin:'Администратор'}[r] || r);
+    const getRoleText = (r) => ({ user: 'Пользователь', kgu: 'Сотрудник/Студент', admin: 'Администратор' }[r] || r);
     const formatBookingTime = (b) => (b.startTime && b.endTime) ? `${b.startTime} - ${b.endTime}` : '-';
 
     // --- RENDER ---
@@ -332,7 +311,7 @@ const AdminPage = () => {
                     <button className={`tab-button ${activeTab === 'moderation' ? 'active' : ''}`} onClick={() => setActiveTab('moderation')}>Модерация</button>
                 </div>
 
-                {error && <div className="error-message" style={{margin:'20px', color:'red'}}>{error}</div>}
+                {error && <div className="error-message" style={{ margin: '20px', color: 'red' }}>{error}</div>}
 
                 <div className="admin-content">
                     {/* --- TAB: STATS --- */}
@@ -380,12 +359,11 @@ const AdminPage = () => {
                                 </div>
                             </div>
 
-                            {/* Графики с ХАРДКОДНЫМИ данными (передаем mockChartData) */}
                             <AdminCharts
-                                statistics={mockChartData} // Передаем фейковые данные для графиков
+                                statistics={mockChartData}
                                 bookings={mockChartData.bookings}
                                 users={mockChartData.users}
-                                revenueData={mockChartData.revenueData} // Спец пропсы, если AdminCharts их поддерживает
+                                revenueData={mockChartData.revenueData}
                             />
                         </div>
                     )}
@@ -488,7 +466,7 @@ const AdminPage = () => {
                                     </thead>
                                     <tbody>
                                     {bookings.filter(b => b.status === 'pending').length === 0 ? (
-                                        <tr><td colSpan="7" style={{textAlign:'center', padding:'20px'}}>Нет заявок на модерации</td></tr>
+                                        <tr><td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>Нет заявок на модерации</td></tr>
                                     ) : (
                                         bookings.filter(booking => booking.status === 'pending').map(booking => (
                                             <tr key={booking.id}>
@@ -497,7 +475,7 @@ const AdminPage = () => {
                                                 <td className="cell-room">{booking.room}</td>
                                                 <td className="cell-date">{booking.date}</td>
                                                 <td className="cell-time">{formatBookingTime(booking)}</td>
-                                                <td className="cell-equipment" style={{maxWidth: '200px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
+                                                <td className="cell-equipment" style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                     {booking.description}
                                                 </td>
                                                 <td className="cell-actions">
