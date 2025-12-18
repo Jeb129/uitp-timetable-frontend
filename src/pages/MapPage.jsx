@@ -29,7 +29,7 @@ const MapPage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // Данные всех аудиторий (ключ - номер аудитории без буквы, значение - объект данных)
+    // Данные всех аудиторий
     const [allRoomsData, setAllRoomsData] = useState({});
 
     const { filters, updateFilter, updateStats } = useFilters();
@@ -43,7 +43,6 @@ const MapPage = () => {
     // Хелпер: извлечение номера для SVG из номера в БД ("Б-101" -> "101")
     const getSvgIdFromDbNumber = (dbNumber) => {
         if (!dbNumber) return null;
-        // Ищем последовательность цифр. Например Б-101а -> 101
         const match = dbNumber.match(/(\d+)/);
         return match ? match[0] : null;
     };
@@ -80,7 +79,6 @@ const MapPage = () => {
                 const roomsObj = {};
                 if (Array.isArray(response.data)) {
                     response.data.forEach(room => {
-                        // room.number это "Б-101". Нам нужен ключ "101" для SVG
                         const svgId = getSvgIdFromDbNumber(room.number);
 
                         if (svgId) {
@@ -106,7 +104,7 @@ const MapPage = () => {
         fetchAllRooms();
     }, []);
 
-    // 2. Фильтрация
+    // Фильтрация
     const checkRoomFilters = (roomData, currentFilters) => {
         if (!roomData) return false;
 
@@ -156,10 +154,9 @@ const MapPage = () => {
         setLoading(true);
         setError(null);
         try {
-            // Формируем номер как в базе данных: "101" -> "Б-101"
+            // ВЕРНУЛ ЖЕСТКУЮ ПРИВЯЗКУ К КОРПУСУ "Б"
             const dbNumberSearch = `Б-${svgId}`;
 
-            // Делаем поиск по полю number
             const response = await publicApi.post('/database/get/Classroom', {
                 number: dbNumberSearch
             });
@@ -167,7 +164,6 @@ const MapPage = () => {
             const data = response.data;
             let room = null;
 
-            // Бэк может вернуть массив найденных записей
             if (Array.isArray(data) && data.length > 0) {
                 room = data[0];
             } else if (data && !Array.isArray(data) && data.id) {
@@ -175,7 +171,6 @@ const MapPage = () => {
             }
 
             if (room) {
-                // Парсим оборудование
                 let equipmentList = [];
                 if (room.equipment) {
                     equipmentList = room.equipment.split(',').map(item => item.trim());
@@ -186,7 +181,7 @@ const MapPage = () => {
                 const roomType = getTypeFromData(room.equipment, room.description);
 
                 setRoomInfo({
-                    id: room.id,
+                    id: room.id,          // Primary Key для бронирования
                     name: room.number,    // "Б-101"
                     svgId: svgId,         // "101"
                     type: roomType === 'computer' ? 'Компьютерный класс' : 'Лекционная',
@@ -239,7 +234,6 @@ const MapPage = () => {
 
     // --- БРОНИРОВАНИЕ ---
     const handleBookRoom = async () => {
-        // roomInfo.id содержит реальный ID записи из БД, который мы загрузили в fetchRoomInfo
         if (!roomInfo || !roomInfo.id) {
             alert("Ошибка: Не выбрана аудитория или отсутствуют данные");
             return;
@@ -269,17 +263,32 @@ const MapPage = () => {
             const bookingDate = new Date();
             bookingDate.setHours(timeData.startH, timeData.startM, 0, 0);
 
+            // Если время уже прошло сегодня, переносим на завтра
             const now = new Date();
             if (bookingDate < now) {
                 bookingDate.setDate(bookingDate.getDate() + 1);
             }
 
-            const isoDate = bookingDate.toISOString().split('.')[0];
+            // Формируем ISO строку вручную в ЛОКАЛЬНОМ времени (без Z)
+            const year = bookingDate.getFullYear();
+            const month = String(bookingDate.getMonth() + 1).padStart(2, '0');
+            const day = String(bookingDate.getDate()).padStart(2, '0');
+            const hours = String(bookingDate.getHours()).padStart(2, '0');
+            const minutes = String(bookingDate.getMinutes()).padStart(2, '0');
+            const seconds = '00';
 
-            // Отправляем ID записи (Integer)
+            const localIsoDate = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+
+            console.log("Отправка бронирования:", {
+                classroom_number: roomInfo.id,
+                date: localIsoDate,
+                duration: timeData.duration,
+                user_id: user.id
+            });
+
             await privateApi.post('/booking/create', {
-                classroom_number: roomInfo.id, // Бэкенд ждет ID записи здесь
-                date: isoDate,
+                classroom_number: roomInfo.id,
+                date: localIsoDate,
                 duration: timeData.duration,
                 user_id: user.id
             });
@@ -294,6 +303,8 @@ const MapPage = () => {
             let errMsg = 'Произошла ошибка при бронировании.';
             if (err.response && err.response.data && err.response.data.error) {
                 errMsg += `\nДетали: ${err.response.data.error}`;
+            } else if (err.response && err.response.data && err.response.data.message) {
+                errMsg += `\n${err.response.data.message}`;
             }
             alert(errMsg);
         } finally {
@@ -368,13 +379,23 @@ const MapPage = () => {
 
             <div className="map-container">
                 <div className="map-content">
-                    <InteractiveSVG
-                        svgUrl={currentSVG}
-                        onRoomClick={handleRoomClick}
-                        selectedRoom={selectedRoom}
-                        filteredRooms={getFilteredRooms}
-                        currentFloor={currentFloor}
-                    />
+                    {mapMode === '2d' ? (
+                        <InteractiveSVG
+                            svgUrl={currentSVG}
+                            onRoomClick={handleRoomClick}
+                            selectedRoom={selectedRoom}
+                            filteredRooms={getFilteredRooms}
+                            currentFloor={currentFloor}
+                        />
+                    ) : (
+                        <ThreeDViewer floor={currentFloor} />
+                    )}
+
+                    {loading && (
+                        <div className="loading-overlay">
+                            <div className="loading-spinner">Загрузка информации...</div>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -382,7 +403,7 @@ const MapPage = () => {
                 roomInfo={roomInfo}
                 isOpen={isRoomModalOpen}
                 onClose={handleCloseModal}
-                onBook={handleBookRoom} // Передаем функцию без аргументов, так как ID уже в roomInfo
+                onBook={handleBookRoom}
                 loading={loading}
                 error={error}
             />
