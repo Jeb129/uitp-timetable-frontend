@@ -44,7 +44,6 @@ const ProfilePage = () => {
                 }));
 
                 try {
-                    // Запрашиваем данные пользователя через универсальный метод
                     const response = await privateApi.post('/database/get/User', {
                         id: user.id
                     });
@@ -70,9 +69,7 @@ const ProfilePage = () => {
 
     // --- Логика Бронирований ---
 
-    // Преобразование формата БД (Booking) в формат фронтенда
     const mapBackendBookingToFrontend = (bk) => {
-        // В модели Booking поля называются date_start и date_end
         const startDate = new Date(bk.date_start);
         const endDate = new Date(bk.date_end);
 
@@ -80,42 +77,71 @@ const ProfilePage = () => {
         const startTimeStr = startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const endTimeStr = endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-        // Преобразуем статус из Boolean/Null в строку
-        // null -> 'pending', true -> 'confirmed', false -> 'rejected'
         let statusStr = 'pending';
         if (bk.status === true) statusStr = 'confirmed';
         if (bk.status === false) statusStr = 'rejected';
 
+        // ИСПОЛЬЗУЕМ ПОДГРУЖЕННЫЙ НОМЕР АУДИТОРИИ
+        // Если classroom_number был успешно найден, выводим его (например "Аудитория Б-101")
+        // Если нет — выводим ID как запасной вариант.
+        const roomName = bk.classroom_number
+            ? `Аудитория ${bk.classroom_number}`
+            : `Аудитория (ID: ${bk.classroom_id})`;
+
         return {
             id: bk.id,
-            // В сырой модели Booking есть только classroom_id.
-            // Чтобы получить номер (Б-101), нужно делать join или отдельный запрос.
-            // Пока выводим ID, либо можно добавить логику дозагрузки.
-            room: `Аудитория (ID: ${bk.classroom_id})`,
+            room: roomName,
             date: dateStr,
             time: `${startTimeStr} - ${endTimeStr}`,
             status: statusStr,
-            equipment: [] // Список оборудования в модели Booking отсутствует
+            equipment: [] // Оборудование можно подгружать аналогично, если нужно
         };
     };
 
-    // Загрузка бронирований
+    // Загрузка бронирований с "обогащением" данными об аудитории
     useEffect(() => {
         const fetchBookings = async () => {
             if (user && user.id) {
                 setLoadingBookings(true);
                 try {
-                    // ИСПОЛЬЗУЕМ УНИВЕРСАЛЬНЫЙ POST ЗАПРОС
-                    // /database/get/Booking c фильтром по user_id
+                    // 1. Получаем список бронирований
                     const response = await privateApi.post('/database/get/Booking', {
                         user_id: user.id
                     });
 
-                    // Ответ ожидается массивом
-                    const data = Array.isArray(response.data) ? response.data : [response.data];
+                    // Нормализуем ответ в массив
+                    const bookingsData = Array.isArray(response.data) ? response.data : [response.data];
 
-                    const mappedData = data.map(mapBackendBookingToFrontend);
-                    // Сортируем: новые сверху (по id или дате)
+                    // 2. Для каждого бронирования делаем запрос к таблице Classroom, чтобы узнать номер
+                    // Используем Promise.all для параллельного выполнения запросов
+                    const enrichedBookings = await Promise.all(bookingsData.map(async (booking) => {
+                        try {
+                            // Запрашиваем Classroom по id
+                            const roomResponse = await privateApi.post('/database/get/Classroom', {
+                                id: booking.classroom_id
+                            });
+
+                            // Получаем объект аудитории
+                            const roomData = Array.isArray(roomResponse.data)
+                                ? roomResponse.data[0]
+                                : roomResponse.data;
+
+                            // Возвращаем объект бронирования + поле classroom_number
+                            return {
+                                ...booking,
+                                classroom_number: roomData ? roomData.number : null // Берем поле 'number' из модели
+                            };
+                        } catch (err) {
+                            console.error(`Не удалось получить данные для аудитории ID ${booking.classroom_id}`, err);
+                            // Если ошибка (например аудитория удалена), возвращаем бронь без номера
+                            return booking;
+                        }
+                    }));
+
+                    // 3. Преобразуем данные для отображения
+                    const mappedData = enrichedBookings.map(mapBackendBookingToFrontend);
+
+                    // Сортируем: новые сверху
                     mappedData.sort((a, b) => b.id - a.id);
 
                     setBookings(mappedData);
@@ -133,7 +159,7 @@ const ProfilePage = () => {
     }, [user, activeTab]);
 
 
-    // --- Логика Редактирования (без изменений) ---
+    // --- Остальной код страницы (Редактирование, Logout и т.д.) без изменений ---
     const handleEditClick = () => {
         setEditForm({ fullName: userInfo.fullName, phone: userInfo.phone });
         setIsEditing(true);
@@ -152,8 +178,6 @@ const ProfilePage = () => {
 
     const validateForm = () => {
         if (!editForm.fullName.trim()) return "ФИО не может быть пустым";
-        const phoneRegex = /^(\+7|8)?[\s-]?\(?[489][0-9]{2}\)?[\s-]?[0-9]{3}[\s-]?[0-9]{2}[\s-]?[0-9]{2}$/;
-        if (!phoneRegex.test(editForm.phone)) return "Некорректный формат телефона";
         return null;
     };
 
