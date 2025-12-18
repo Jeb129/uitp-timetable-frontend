@@ -310,14 +310,6 @@ const ProfilePage = () => {
                                                         {translateStatus(booking.status)}
                                                     </span>
                                                 </td>
-                                                <td>
-                                                    <div className="table-actions">
-                                                        <button className="action-button view">Инфо</button>
-                                                        {booking.status === 'pending' && (
-                                                            <button className="action-button cancel">Отмена</button>
-                                                        )}
-                                                    </div>
-                                                </td>
                                             </tr>
                                         ))}
                                         </tbody>

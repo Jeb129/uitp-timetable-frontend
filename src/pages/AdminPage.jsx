@@ -512,7 +512,6 @@ const AdminPage = () => {
                                                     <div className="action-buttons">
                                                         <button className="btn-approve" onClick={() => handleBookingAction(booking.id, 'approve')}>Подтвердить</button>
                                                         <button className="btn-reject" onClick={() => handleBookingAction(booking.id, 'reject')}>Отклонить</button>
-                                                        <button className="btn-details" onClick={() => handleViewBooking(booking)}>Подробнее</button>
                                                     </div>
                                                 </td>
                                             </tr>
