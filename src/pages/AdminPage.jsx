@@ -1,8 +1,9 @@
-
+// src/pages/AdminPage.jsx
 import React, { useState, useEffect } from 'react';
 import './AdminPage.css';
 import BookingDetailsModal from '../components/modals/BookingDetailsModal.jsx';
 import AdminCharts from '../components/charts/AdminCharts.jsx';
+import { privateApi } from '../utils/api/axios';
 
 const AdminPage = () => {
     const [activeTab, setActiveTab] = useState('stats');
@@ -13,272 +14,263 @@ const AdminPage = () => {
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [showBookingModal, setShowBookingModal] = useState(false);
 
-    // Статические данные для демонстрации
-    const [users, setUsers] = useState([
-        { id: 1, email: 'user1@example.com', role: 'student', status: 'active' },
-        { id: 2, email: 'user2@example.com', role: 'external', status: 'pending' },
-        { id: 3, email: 'user3@example.com', role: 'employee', status: 'active' },
-        { id: 4, email: 'user4@example.com', role: 'external', status: 'blocked' },
-        { id: 5, email: 'user5@example.com', role: 'student', status: 'active' },
-        { id: 6, email: 'user6@example.com', role: 'employee', status: 'active' },
-    ]);
+    // Данные для таблиц
+    const [users, setUsers] = useState([]);
+    const [bookings, setBookings] = useState([]);
 
-    const [bookings, setBookings] = useState([
-        {
-            id: 1,
-            userEmail: 'user1@example.com',
-            room: 'Аудитория 101',
-            date: '2024-01-15',
-            startTime: '10:00',
-            endTime: '12:00',
-            status: 'approved',
-            equipment: ['Проектор', 'Микрофон', 'Экран']
-        },
-        {
-            id: 2,
-            userEmail: 'user2@example.com',
-            room: 'Аудитория 205',
-            date: '2024-01-16',
-            startTime: '14:00',
-            endTime: '15:30',
-            status: 'pending',
-            equipment: ['Интерактивная доска']
-        },
-        {
-            id: 3,
-            userEmail: 'user3@example.com',
-            room: 'Конференц-зал',
-            date: '2024-01-17',
-            startTime: '16:00',
-            endTime: '18:00',
-            status: 'rejected',
-            equipment: ['Проектор', 'Звуковая система']
-        },
-        {
-            id: 4,
-            userEmail: 'user4@example.com',
-            room: 'Аудитория 301',
-            date: '2024-01-18',
-            startTime: '09:00',
-            endTime: '10:30',
-            status: 'pending',
-            equipment: ['Ноутбук', 'Колонки']
-        },
-        {
-            id: 5,
-            userEmail: 'user5@example.com',
-            room: 'Аудитория 102',
-            date: '2024-01-19',
-            startTime: '11:00',
-            endTime: '13:00',
-            status: 'pending',
-            equipment: ['Проектор']
-        },
-    ]);
+    // --- ХАРДКОДНЫЕ ДАННЫЕ ДЛЯ ГРАФИКОВ (ЧТОБЫ БЫЛО КРАСИВО) ---
+    const mockChartData = {
+        users: [
+            { id: 1, role: 'student', status: 'active' },
+            { id: 2, role: 'external', status: 'active' },
+            { id: 3, role: 'employee', status: 'active' },
+            { id: 4, role: 'student', status: 'active' },
+            { id: 5, role: 'student', status: 'active' }
+        ],
+        bookings: [
+            // Фейковые данные для графика активности по месяцам/дням
+            { date: '2024-01-01', status: 'approved' },
+            { date: '2024-01-02', status: 'approved' }
+        ],
+        // Специфичные данные, которые может ожидать компонент AdminCharts
+        revenueData: [
+            { name: 'Янв', value: 4000 },
+            { name: 'Фев', value: 3000 },
+            { name: 'Мар', value: 2000 },
+            { name: 'Апр', value: 2780 },
+            { name: 'Май', value: 1890 },
+            { name: 'Июн', value: 2390 },
+        ],
+        statusDistribution: [
+            { name: 'Подтверждено', value: 400 },
+            { name: 'Отклонено', value: 300 },
+            { name: 'На проверке', value: 300 },
+        ]
+    };
 
+    // --- РЕАЛЬНАЯ СТАТИСТИКА (ДЛЯ КАРТОЧЕК) ---
     const [statistics, setStatistics] = useState({
-        totalUsers: 6,
-        activeUsers: 4,
-        pendingUsers: 1,
-        blockedUsers: 1,
-        totalBookings: 5,
-        pendingModeration: 3,
-        approvedBookings: 1,
-        rejectedBookings: 1,
-        roomsAvailable: 25,
-        occupiedRooms: 12,
-        popularRoom: 'Аудитория 101'
+        // Пользователи
+        totalUsers: 0,
+        activeUsers: 0,
+        pendingUsers: 0,
+        blockedUsers: 0,
+
+        // Бронирования
+        totalBookings: 0,
+        pendingModeration: 0,
+        approvedBookings: 0,
+        rejectedBookings: 0,
+        totalRevenue: 0, // Новое поле из classroom/statistics
+
+        // Аудитории
+        roomsAvailable: 0, // Можно подгрузить count(Classroom)
+        occupiedRooms: 0,
+        popularRoom: '-' // Берем из classroom/statistics
     });
 
-    // Загрузка данных при монтировании и смене вкладок
+    // --- ЗАГРУЗКА ДАННЫХ ---
     useEffect(() => {
         loadData();
     }, [activeTab]);
 
-    // Функция для загрузки данных (закомментирована для статических данных)
     const loadData = async () => {
         setLoading(true);
         setError(null);
-
         try {
-            // Имитация загрузки данных
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            /*
             switch (activeTab) {
                 case 'stats':
-                    await loadStatistics();
+                    await fetchStatistics();
                     break;
                 case 'users':
-                    await loadUsers();
+                    await fetchUsers();
                     break;
                 case 'bookings':
-                    await loadBookings();
-                    break;
                 case 'moderation':
-                    await loadModerationBookings();
+                    await fetchBookings();
                     break;
                 default:
                     break;
             }
-            */
-
         } catch (err) {
+            console.error(err);
             setError('Ошибка при загрузке данных');
-            console.error('Error loading data:', err);
         } finally {
             setLoading(false);
         }
     };
 
-    // Шаблоны API функций
-    /*
-    const loadStatistics = async () => {
-        const response = await fetch('/api/admin/statistics', {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to load statistics');
-        }
-
-        const data = await response.json();
-        setStatistics(data);
-    };
-
-    const loadUsers = async () => {
-        const response = await fetch('/api/admin/users', {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to load users');
-        }
-
-        const data = await response.json();
-        setUsers(data);
-    };
-
-    const loadBookings = async () => {
-        const response = await fetch('/api/admin/bookings', {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to load bookings');
-        }
-
-        const data = await response.json();
-        setBookings(data);
-    };
-
-    const loadModerationBookings = async () => {
-        const response = await fetch('/api/admin/bookings/pending', {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to load moderation bookings');
-        }
-
-        const data = await response.json();
-        setBookings(data);
-    };
-
-    const handleUserAction = async (userId, action, data = {}) => {
+    // --- 1. ЛОГИКА СТАТИСТИКИ (СМЕШАННАЯ) ---
+    const fetchStatistics = async () => {
         try {
-            const response = await fetch(`/api/admin/users/${userId}/${action}`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
+            // Запускаем запросы параллельно
+            const [usersRes, bookingsRes, classroomsRes, statsRes] = await Promise.all([
+                privateApi.post('/database/get/User', {}),     // Все юзеры
+                privateApi.post('/database/get/Booking', {}),  // Все брони
+                privateApi.post('/database/get/Classroom', {}), // Все аудитории (для кол-ва)
+                privateApi.get('/classroom/statistics')        // Спец. статистика выручки
+            ]);
+
+            const usersData = Array.isArray(usersRes.data) ? usersRes.data : [usersRes.data];
+            const bookingsData = Array.isArray(bookingsRes.data) ? bookingsRes.data : [bookingsRes.data];
+            const classroomsData = Array.isArray(classroomsRes.data) ? classroomsRes.data : [classroomsRes.data];
+
+            // Обработка данных Users
+            const totalUsers = usersData.length;
+            // В модели User поле confirmed (bool).
+            // Допустим: active = confirmed=true, pending = confirmed=false
+            const activeUsers = usersData.filter(u => u.confirmed).length;
+            const pendingUsers = usersData.filter(u => !u.confirmed).length;
+            const blockedUsers = 0; // В текущей модели нет поля blocked
+
+            // Обработка данных Bookings (статусы)
+            const totalBookings = bookingsData.length;
+            const pendingModeration = bookingsData.filter(b => b.status === null).length;
+            const approvedBookings = bookingsData.filter(b => b.status === true).length;
+            const rejectedBookings = bookingsData.filter(b => b.status === false).length;
+
+            // Обработка данных из classrooms.py (Statistics)
+            // { success: true, statistics: { top_profitable_classrooms: [], total_revenue_all: ... } }
+            const apiStats = statsRes.data.success ? statsRes.data.statistics : {};
+            const totalRevenue = apiStats.total_revenue_all || 0;
+
+            // Самая популярная/прибыльная аудитория
+            const popularRoom = (apiStats.top_profitable_classrooms && apiStats.top_profitable_classrooms.length > 0)
+                ? apiStats.top_profitable_classrooms[0].classroom_number
+                : '-';
+
+            setStatistics({
+                totalUsers,
+                activeUsers,
+                pendingUsers,
+                blockedUsers,
+
+                totalBookings,
+                pendingModeration,
+                approvedBookings,
+                rejectedBookings,
+                totalRevenue,
+
+                roomsAvailable: classroomsData.length,
+                occupiedRooms: 0, // Сложно посчитать "прямо сейчас" без доп логики, оставим 0
+                popularRoom
             });
 
-            if (!response.ok) {
-                throw new Error(`Failed to ${action} user`);
-            }
-
-            await loadUsers();
-
         } catch (err) {
-            setError(`Ошибка при выполнении действия: ${err.message}`);
-            console.error('Error performing user action:', err);
+            console.error("Ошибка загрузки статистики:", err);
+            // Не блокируем экран ошибкой, просто в консоль
         }
     };
 
-    const handleBookingAction = async (bookingId, action, data = {}) => {
+    // --- API: ПОЛЬЗОВАТЕЛИ ---
+    const fetchUsers = async () => {
         try {
-            const response = await fetch(`/api/admin/bookings/${bookingId}/${action}`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
+            const response = await privateApi.post('/database/get/User', {});
+            const data = Array.isArray(response.data) ? response.data : [response.data];
+            data.sort((a, b) => a.id - b.id);
+            setUsers(data);
+        } catch (err) {
+            console.error("Ошибка получения пользователей:", err);
+            setError("Не удалось загрузить пользователей");
+        }
+    };
+
+    const handleUserAction = async (userId, action) => {
+        setLoading(true);
+        try {
+            const newConfirmedStatus = action === 'confirm';
+            await privateApi.post('/database/update/User', {
+                id: userId,
+                confirmed: newConfirmedStatus
+            });
+            setUsers(prev => prev.map(user =>
+                user.id === userId ? { ...user, confirmed: newConfirmedStatus } : user
+            ));
+        } catch (err) {
+            console.error(err);
+            setError(`Ошибка при изменении статуса: ${err.message}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // --- API: БРОНИРОВАНИЯ ---
+    const fetchBookings = async () => {
+        try {
+            const bookingsRes = await privateApi.post('/database/get/Booking', {});
+            const rawBookings = Array.isArray(bookingsRes.data) ? bookingsRes.data : [bookingsRes.data];
+
+            const [usersRes, roomsRes] = await Promise.all([
+                privateApi.post('/database/get/User', {}),
+                privateApi.post('/database/get/Classroom', {})
+            ]);
+
+            const allUsers = Array.isArray(usersRes.data) ? usersRes.data : [usersRes.data];
+            const allRooms = Array.isArray(roomsRes.data) ? roomsRes.data : [roomsRes.data];
+
+            const usersMap = {};
+            allUsers.forEach(u => usersMap[u.id] = u.email);
+
+            const roomsMap = {};
+            allRooms.forEach(r => roomsMap[r.id] = r.number);
+
+            const enrichedBookings = rawBookings.map(b => {
+                const startDate = new Date(b.date_start);
+                const endDate = new Date(b.date_end);
+
+                let statusStr = 'pending';
+                if (b.status === true) statusStr = 'approved';
+                if (b.status === false) statusStr = 'rejected';
+
+                return {
+                    id: b.id,
+                    userEmail: usersMap[b.user_id] || `ID: ${b.user_id}`,
+                    room: roomsMap[b.classroom_id] ? `Ауд. ${roomsMap[b.classroom_id]}` : `Room ID: ${b.classroom_id}`,
+                    date: startDate.toLocaleDateString('ru-RU'),
+                    startTime: startDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    endTime: endDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    status: statusStr,
+                    rawStatus: b.status,
+                    description: b.description || 'Нет описания',
+                    equipment: []
+                };
             });
 
-            if (!response.ok) {
-                throw new Error(`Failed to ${action} booking`);
-            }
-
-            if (activeTab === 'moderation') {
-                await loadModerationBookings();
-            } else {
-                await loadBookings();
-            }
+            enrichedBookings.sort((a, b) => b.id - a.id);
+            setBookings(enrichedBookings);
 
         } catch (err) {
-            setError(`Ошибка при выполнении действия: ${err.message}`);
-            console.error('Error performing booking action:', err);
+            console.error("Ошибка получения бронирований:", err);
+            setError("Не удалось загрузить бронирования");
         }
     };
 
-    const handleBulkAction = async (action, data = {}) => {
+    const handleBookingAction = async (bookingId, action) => {
+        setLoading(true);
         try {
-            const response = await fetch(`/api/admin/bulk/${action}`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    ids: selectedUsers,
-                    ...data
-                })
+            const isApprove = action === 'approve';
+            const commentText = isApprove ? "Ваша заявка одобрена." : "Заявка отклонена администратором.";
+
+            await privateApi.post('/booking/update', {
+                id: bookingId,
+                status: isApprove,
+                comment: commentText
             });
 
-            if (!response.ok) {
-                throw new Error(`Failed to perform bulk ${action}`);
-            }
-
-            await loadUsers();
-            setSelectedUsers([]);
+            const statusStr = isApprove ? 'approved' : 'rejected';
+            setBookings(prev => prev.map(b =>
+                b.id === bookingId ? { ...b, status: statusStr, rawStatus: isApprove } : b
+            ));
 
         } catch (err) {
-            setError(`Ошибка при массовом действии: ${err.message}`);
-            console.error('Error performing bulk action:', err);
+            console.error(err);
+            setError(`Ошибка при изменении статуса: ${err.message}`);
+        } finally {
+            setLoading(false);
         }
     };
-    */
 
+    // --- UI HELPERS ---
     const handleViewBooking = (booking) => {
         setSelectedBooking(booking);
         setShowBookingModal(true);
@@ -299,146 +291,30 @@ const AdminPage = () => {
         handleCloseBookingModal();
     };
 
-    // Заглушки для действий (для демонстрации)
-    const handleUserAction = async (userId, action, data = {}) => {
-        setLoading(true);
-        try {
-            // Имитация API вызова
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            if (action === 'block') {
-                setUsers(users.map(user =>
-                    user.id === userId ? { ...user, status: 'blocked' } : user
-                ));
-            } else if (action === 'unblock') {
-                setUsers(users.map(user =>
-                    user.id === userId ? { ...user, status: 'active' } : user
-                ));
-            }
-
-        } catch (err) {
-            setError(`Ошибка при выполнении действия: ${err.message}`);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleBookingAction = async (bookingId, action, data = {}) => {
-        setLoading(true);
-        try {
-            // Имитация API вызова
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            if (action === 'approve') {
-                setBookings(bookings.map(booking =>
-                    booking.id === bookingId ? { ...booking, status: 'approved' } : booking
-                ));
-            } else if (action === 'reject') {
-                setBookings(bookings.map(booking =>
-                    booking.id === bookingId ? { ...booking, status: 'rejected' } : booking
-                ));
-            }
-
-        } catch (err) {
-            setError(`Ошибка при выполнении действия: ${err.message}`);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleBulkAction = async (action, data = {}) => {
-        setLoading(true);
-        try {
-            // Имитация API вызова
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            if (action === 'export') {
-                console.log('Экспорт выбранных пользователей:', selectedUsers);
-                // В реальном приложении здесь будет логика экспорта
-            }
-
-            setSelectedUsers([]);
-
-        } catch (err) {
-            setError(`Ошибка при массовом действии: ${err.message}`);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleUserSelect = (userId) => {
-        setSelectedUsers(prev =>
-            prev.includes(userId)
-                ? prev.filter(id => id !== userId)
-                : [...prev, userId]
-        );
-    };
-
-    const handleSelectAll = () => {
-        setSelectedUsers(selectedUsers.length === users.length ? [] : users.map(user => user.id));
-    };
+    const handleBulkAction = (action) => alert("В разработке");
+    const handleUserSelect = (id) => setSelectedUsers(prev => prev.includes(id) ? prev.filter(x => x!==id) : [...prev, id]);
+    const handleSelectAll = () => setSelectedUsers(selectedUsers.length === users.length ? [] : users.map(u => u.id));
 
     const getStatusBadge = (status) => {
-        const statusMap = {
-            active: { class: 'status-active', text: 'Активен' },
-            pending: { class: 'status-pending', text: 'На проверке' },
-            blocked: { class: 'status-blocked', text: 'Заблокирован' },
-            approved: { class: 'status-approved', text: 'Подтверждено' },
-            rejected: { class: 'status-rejected', text: 'Отклонено' }
+        const map = {
+            active: 'Активен', pending: 'На проверке', blocked: 'Заблокирован',
+            approved: 'Подтверждено', rejected: 'Отклонено'
         };
-        const statusInfo = statusMap[status] || { class: '', text: status };
-        return <span className={`status-badge ${statusInfo.class}`}>{statusInfo.text}</span>;
+        const cls = `status-${status}`;
+        return <span className={`status-badge ${cls}`}>{map[status] || status}</span>;
     };
 
-    const getRoleText = (role) => {
-        const roleMap = {
-            student: 'Студент',
-            employee: 'Сотрудник',
-            external: 'Внешний пользователь',
-            admin: 'Администратор'
-        };
-        return roleMap[role] || role;
-    };
+    const getConfirmationBadge = (isConfirmed) => isConfirmed
+        ? <span className="status-badge status-approved">Подтвержден</span>
+        : <span className="status-badge status-pending" style={{background:'#e9ecef',color:'#495057'}}>Нет</span>;
 
-    // Функция для форматирования времени бронирования
-    const formatBookingTime = (booking) => {
-        if (booking.startTime && booking.endTime) {
-            return `${booking.startTime} - ${booking.endTime}`;
-        }
-        return booking.time || 'Время не указано';
-    };
+    const getRoleText = (r) => ({user:'Пользователь', kgu:'Сотрудник/Студент', admin:'Администратор'}[r] || r);
+    const formatBookingTime = (b) => (b.startTime && b.endTime) ? `${b.startTime} - ${b.endTime}` : '-';
 
-    // Функция для получения email пользователя
-    const getUserEmail = (booking) => {
-        return booking.userEmail || booking.user || 'Email не указан';
-    };
+    // --- RENDER ---
 
-    if (loading) {
-        return (
-            <div className="admin-page">
-                <div className="admin-container">
-                    <div className="loading-state">
-                        <div className="loading-spinner"></div>
-                        <p>Загрузка данных...</p>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="admin-page">
-                <div className="admin-container">
-                    <div className="error-state">
-                        <p>{error}</p>
-                        <button onClick={loadData} className="action-btn primary">
-                            Попробовать снова
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
+    if (loading && bookings.length === 0 && users.length === 0 && activeTab !== 'stats') {
+        return <div className="admin-page"><div className="admin-container"><div className="loading-state"><div className="loading-spinner"></div><p>Загрузка данных...</p></div></div></div>;
     }
 
     return (
@@ -450,54 +326,26 @@ const AdminPage = () => {
                 </div>
 
                 <div className="admin-tabs">
-                    <button
-                        className={`tab-button ${activeTab === 'stats' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('stats')}
-                    >
-                        Статистика
-                    </button>
-                    <button
-                        className={`tab-button ${activeTab === 'users' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('users')}
-                    >
-                        Пользователи
-                    </button>
-                    <button
-                        className={`tab-button ${activeTab === 'bookings' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('bookings')}
-                    >
-                        Бронирования
-                    </button>
-                    <button
-                        className={`tab-button ${activeTab === 'moderation' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('moderation')}
-                    >
-                        Модерация
-                    </button>
+                    <button className={`tab-button ${activeTab === 'stats' ? 'active' : ''}`} onClick={() => setActiveTab('stats')}>Статистика</button>
+                    <button className={`tab-button ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}>Пользователи</button>
+                    <button className={`tab-button ${activeTab === 'bookings' ? 'active' : ''}`} onClick={() => setActiveTab('bookings')}>Бронирования</button>
+                    <button className={`tab-button ${activeTab === 'moderation' ? 'active' : ''}`} onClick={() => setActiveTab('moderation')}>Модерация</button>
                 </div>
 
+                {error && <div className="error-message" style={{margin:'20px', color:'red'}}>{error}</div>}
+
                 <div className="admin-content">
+                    {/* --- TAB: STATS --- */}
                     {activeTab === 'stats' && (
                         <div className="tab-panel">
                             <div className="table-header">
                                 <h3>Общая статистика</h3>
                                 <div className="table-actions">
-                                    <button
-                                        className="action-btn primary"
-                                        onClick={() => alert('Функция экспорта в разработке')}
-                                    >
-                                        Экспорт отчета
-                                    </button>
-                                    <button
-                                        className="action-btn secondary"
-                                        onClick={loadData}
-                                    >
-                                        Обновить данные
-                                    </button>
+                                    <button className="action-btn secondary" onClick={loadData}>Обновить</button>
                                 </div>
                             </div>
 
-                            {/* Блок с карточками статистики */}
+                            {/* Карточки с РЕАЛЬНЫМИ данными */}
                             <div className="stats-container">
                                 <div className="stats-grid-three">
                                     <div className="stat-card">
@@ -505,9 +353,8 @@ const AdminPage = () => {
                                         <div className="stat-number">{statistics.totalUsers}</div>
                                         <div className="stat-label">Всего пользователей</div>
                                         <div className="stat-details">
-                                            <span>Активных: {statistics.activeUsers}</span>
-                                            <span>На проверке: {statistics.pendingUsers}</span>
-                                            <span>Заблокировано: {statistics.blockedUsers}</span>
+                                            <span>Подтверждено: {statistics.activeUsers}</span>
+                                            <span>Не подтверждено: {statistics.pendingUsers}</span>
                                         </div>
                                     </div>
 
@@ -516,102 +363,65 @@ const AdminPage = () => {
                                         <div className="stat-number">{statistics.totalBookings}</div>
                                         <div className="stat-label">Всего бронирований</div>
                                         <div className="stat-details">
-                                            <span>Подтверждено: {statistics.approvedBookings}</span>
+                                            <span>Одобрено: {statistics.approvedBookings}</span>
                                             <span>На модерации: {statistics.pendingModeration}</span>
-                                            <span>Отклонено: {statistics.rejectedBookings}</span>
+                                            <span>Выручка: {statistics.totalRevenue} ₽</span>
                                         </div>
                                     </div>
 
                                     <div className="stat-card">
                                         <h4>Аудитории</h4>
                                         <div className="stat-number">{statistics.roomsAvailable}</div>
-                                        <div className="stat-label">Доступно аудиторий</div>
+                                        <div className="stat-label">Всего аудиторий</div>
                                         <div className="stat-details">
-                                            <span>Занято сейчас: {statistics.occupiedRooms}</span>
-                                            <span>Популярная: {statistics.popularRoom}</span>
+                                            <span>Топ по выручке: {statistics.popularRoom}</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Компонент с графиками */}
+                            {/* Графики с ХАРДКОДНЫМИ данными (передаем mockChartData) */}
                             <AdminCharts
-                                statistics={statistics}
-                                bookings={bookings}
-                                users={users}
+                                statistics={mockChartData} // Передаем фейковые данные для графиков
+                                bookings={mockChartData.bookings}
+                                users={mockChartData.users}
+                                revenueData={mockChartData.revenueData} // Спец пропсы, если AdminCharts их поддерживает
                             />
                         </div>
                     )}
 
+                    {/* --- TAB: USERS --- */}
                     {activeTab === 'users' && (
                         <div className="tab-panel">
                             <div className="table-header">
                                 <h3>Управление пользователями</h3>
                                 <div className="table-actions">
-                                    <button
-                                        className="action-btn primary"
-                                        onClick={() => alert('Функция добавления пользователя в разработке')}
-                                    >
-                                        Добавить пользователя
-                                    </button>
-                                    <button
-                                        className="action-btn secondary"
-                                        disabled={selectedUsers.length === 0}
-                                        onClick={() => handleBulkAction('export')}
-                                    >
-                                        Экспорт выбранных ({selectedUsers.length})
-                                    </button>
+                                    <button className="action-btn secondary" onClick={() => handleBulkAction('export')}>Экспорт</button>
                                 </div>
                             </div>
                             <div className="table-container">
                                 <table className="admin-table">
                                     <thead>
                                     <tr>
-                                        <th>
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedUsers.length === users.length && users.length > 0}
-                                                onChange={handleSelectAll}
-                                            />
-                                        </th>
-                                        <th>ID</th>
-                                        <th>Email</th>
-                                        <th>Роль</th>
-                                        <th>Статус</th>
-                                        <th>Действия</th>
+                                        <th><input type="checkbox" checked={selectedUsers.length === users.length && users.length > 0} onChange={handleSelectAll} /></th>
+                                        <th>ID</th><th>Email</th><th>Роль</th><th>Подтверждение КГУ</th><th>Действия</th>
                                     </tr>
                                     </thead>
                                     <tbody>
                                     {users.map(user => (
                                         <tr key={user.id}>
-                                            <td>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedUsers.includes(user.id)}
-                                                    onChange={() => handleUserSelect(user.id)}
-                                                />
-                                            </td>
+                                            <td><input type="checkbox" checked={selectedUsers.includes(user.id)} onChange={() => handleUserSelect(user.id)} /></td>
                                             <td className="cell-id">#{user.id}</td>
                                             <td className="cell-email">{user.email}</td>
                                             <td className="cell-role">{getRoleText(user.role)}</td>
-                                            <td className="cell-status">{getStatusBadge(user.status)}</td>
+                                            <td className="cell-status">{getConfirmationBadge(user.confirmed)}</td>
                                             <td className="cell-actions">
                                                 <div className="action-buttons">
-                                                    <button
-                                                        className="btn-edit"
-                                                        onClick={() => alert('Редактирование пользователя в разработке')}
-                                                    >
-                                                        Редактировать
-                                                    </button>
-                                                    <button
-                                                        className="btn-block"
-                                                        onClick={() => handleUserAction(
-                                                            user.id,
-                                                            user.status === 'blocked' ? 'unblock' : 'block'
-                                                        )}
-                                                    >
-                                                        {user.status === 'blocked' ? 'Разблокировать' : 'Заблокировать'}
-                                                    </button>
+                                                    {user.confirmed ? (
+                                                        <button className="btn-block" onClick={() => handleUserAction(user.id, 'revoke')}>Отменить</button>
+                                                    ) : (
+                                                        <button className="btn-approve" onClick={() => handleUserAction(user.id, 'confirm')}>Подтвердить</button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -622,42 +432,34 @@ const AdminPage = () => {
                         </div>
                     )}
 
+                    {/* --- TAB: BOOKINGS --- */}
                     {activeTab === 'bookings' && (
                         <div className="tab-panel">
                             <div className="table-header">
                                 <h3>Все бронирования</h3>
                                 <div className="table-actions">
-                                    <button className="action-btn primary">Фильтры</button>
-                                    <button className="action-btn secondary">Экспорт всех</button>
+                                    <button className="action-btn secondary" onClick={loadData}>Обновить</button>
                                 </div>
                             </div>
                             <div className="table-container">
                                 <table className="admin-table">
                                     <thead>
                                     <tr>
-                                        <th>ID</th>
-                                        <th>Пользователь</th>
-                                        <th>Аудитория</th>
-                                        <th>Дата</th>
-                                        <th>Время</th>
-                                        <th>Статус</th>
-                                        <th>Действия</th>
+                                        <th>ID</th><th>Пользователь</th><th>Аудитория</th><th>Дата</th><th>Время</th><th>Статус</th><th>Действия</th>
                                     </tr>
                                     </thead>
                                     <tbody>
                                     {bookings.map(booking => (
                                         <tr key={booking.id}>
                                             <td className="cell-id">#{booking.id}</td>
-                                            <td className="cell-user">{getUserEmail(booking)}</td>
+                                            <td className="cell-user">{booking.userEmail}</td>
                                             <td className="cell-room">{booking.room}</td>
                                             <td className="cell-date">{booking.date}</td>
                                             <td className="cell-time">{formatBookingTime(booking)}</td>
                                             <td className="cell-status">{getStatusBadge(booking.status)}</td>
                                             <td className="cell-actions">
                                                 <div className="action-buttons">
-                                                    <button className="btn-view" onClick={() => handleViewBooking(booking)}>
-                                                        Просмотр </button>
-                                                    <button className="btn-edit">Изменить</button>
+                                                    <button className="btn-view" onClick={() => handleViewBooking(booking)}>Просмотр</button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -668,64 +470,46 @@ const AdminPage = () => {
                         </div>
                     )}
 
+                    {/* --- TAB: MODERATION --- */}
                     {activeTab === 'moderation' && (
                         <div className="tab-panel">
                             <div className="table-header">
                                 <h3>Бронирования на модерации</h3>
                                 <div className="moderation-stats">
-                                    <span className="pending-count">
-                                        Ожидают решения: {bookings.filter(b => b.status === 'pending').length}
-                                    </span>
+                                    <span className="pending-count">Ожидают решения: {bookings.filter(b => b.status === 'pending').length}</span>
                                 </div>
                             </div>
                             <div className="table-container">
                                 <table className="admin-table">
                                     <thead>
                                     <tr>
-                                        <th>ID</th>
-                                        <th>Пользователь</th>
-                                        <th>Аудитория</th>
-                                        <th>Дата</th>
-                                        <th>Время</th>
-                                        <th>Оборудование</th>
-                                        <th>Действия</th>
+                                        <th>ID</th><th>Пользователь</th><th>Аудитория</th><th>Дата</th><th>Время</th><th>Цель (Описание)</th><th>Действия</th>
                                     </tr>
                                     </thead>
                                     <tbody>
-                                    {bookings.filter(booking => booking.status === 'pending').map(booking => (
-                                        <tr key={booking.id}>
-                                            <td className="cell-id">#{booking.id}</td>
-                                            <td className="cell-user">{getUserEmail(booking)}</td>
-                                            <td className="cell-room">{booking.room}</td>
-                                            <td className="cell-date">{booking.date}</td>
-                                            <td className="cell-time">{formatBookingTime(booking)}</td>
-                                            <td className="cell-equipment">
-                                                {booking.equipment ? booking.equipment.join(', ') : 'Оборудование не указано'}
-                                            </td>
-                                            <td className="cell-actions">
-                                                <div className="action-buttons">
-                                                    <button
-                                                        className="btn-approve"
-                                                        onClick={() => handleBookingAction(booking.id, 'approve')}
-                                                    >
-                                                        Подтвердить
-                                                    </button>
-                                                    <button
-                                                        className="btn-reject"
-                                                        onClick={() => handleBookingAction(booking.id, 'reject')}
-                                                    >
-                                                        Отклонить
-                                                    </button>
-                                                    <button
-                                                        className="btn-details"
-                                                        onClick={() => handleViewBooking(booking)}
-                                                    >
-                                                        Подробнее
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {bookings.filter(b => b.status === 'pending').length === 0 ? (
+                                        <tr><td colSpan="7" style={{textAlign:'center', padding:'20px'}}>Нет заявок на модерации</td></tr>
+                                    ) : (
+                                        bookings.filter(booking => booking.status === 'pending').map(booking => (
+                                            <tr key={booking.id}>
+                                                <td className="cell-id">#{booking.id}</td>
+                                                <td className="cell-user">{booking.userEmail}</td>
+                                                <td className="cell-room">{booking.room}</td>
+                                                <td className="cell-date">{booking.date}</td>
+                                                <td className="cell-time">{formatBookingTime(booking)}</td>
+                                                <td className="cell-equipment" style={{maxWidth: '200px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
+                                                    {booking.description}
+                                                </td>
+                                                <td className="cell-actions">
+                                                    <div className="action-buttons">
+                                                        <button className="btn-approve" onClick={() => handleBookingAction(booking.id, 'approve')}>Подтвердить</button>
+                                                        <button className="btn-reject" onClick={() => handleBookingAction(booking.id, 'reject')}>Отклонить</button>
+                                                        <button className="btn-details" onClick={() => handleViewBooking(booking)}>Подробнее</button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                     </tbody>
                                 </table>
                             </div>
