@@ -43,28 +43,24 @@ const Header = () => {
     const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
     const [isTimeRangeModalOpen, setIsTimeRangeModalOpen] = useState(false);
 
-    // Получаем сегодняшнюю дату в формате YYYY-MM-DD для атрибута min
     const today = new Date().toISOString().split('T')[0];
 
-    // Устанавливаем дату по умолчанию (сегодня), если она не выбрана
     useEffect(() => {
         if (!filters.date) {
             updateFilter('date', today);
         }
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, []);
 
-    // --- ЛОГИКА УВЕДОМЛЕНИЙ С УНИВЕРСАЛЬНЫМИ ЭНДПОИНТАМИ ---
+    // --- ЛОГИКА УВЕДОМЛЕНИЙ ---
 
-    // 1. Функция загрузки уведомлений через универсальный эндпоинт
     const loadNotifications = useCallback(async () => {
         if (!user) return;
         try {
-            // Используем универсальный эндпоинт для получения уведомлений текущего пользователя
+            // Используем имя модели в нижнем регистре, как в WEB_ABLE_MODELS
             const response = await privateApi.post('/database/get/notification', {
-                    user_id: user.id, // Фильтруем по ID пользователя
+                user_id: user.id,
             });
 
-            // Обрабатываем ответ от универсального эндпоинта
             const data = response.data?.results || response.data || [];
             const notificationsArray = Array.isArray(data) ? data : [data];
 
@@ -72,78 +68,76 @@ const Header = () => {
                 id: n.id,
                 text: n.message || 'Без текста',
                 time: formatRelativeTime(n.created_at),
-                read: n.is_read || false // Предполагаем наличие поля is_read в модели
+                // ИСПРАВЛЕНО: Проверяем статус 'read' вместо поля is_read
+                read: n.status === 'read'
             }));
+
+            // Сортируем: сначала новые
+            mappedNotifications.sort((a, b) => b.id - a.id);
 
             setNotifications(mappedNotifications);
         } catch (error) {
-            console.error("Ошибка получения уведомлений через универсальный эндпоинт:", error);
+            console.error("Ошибка получения уведомлений:", error);
             setNotifications([]);
         }
     }, [user]);
 
-    // 2. Загружаем уведомления при монтировании компонента
     useEffect(() => {
         loadNotifications();
     }, [loadNotifications]);
 
-    // 3. Функция переключения отображения уведомлений
     const toggleNotifications = () => {
         const newState = !showNotifications;
         setShowNotifications(newState);
 
-        // Если открываем окно уведомлений - обновляем данные
         if (newState) {
             loadNotifications();
         }
     };
 
-    // 4. Функция отметки уведомления как прочитанного через универсальный эндпоинт
+    // Функция отметки уведомления как прочитанного
     const toggleReadStatus = async (id) => {
         // Оптимистичное обновление UI
         setNotifications(prevNotifications =>
             prevNotifications.map(not =>
-                not.id === id ? { ...not, read: !not.read } : not
+                not.id === id ? { ...not, read: true } : not
             )
         );
 
         if (user) {
             try {
-                // Используем универсальный эндпоинт обновления
+                // ИСПРАВЛЕНО:
+                // 1. Плоская структура JSON (без updates: {})
+                // 2. Меняем поле status на 'read'
                 await privateApi.post('/database/update/notification', {
                     id: id,
-                    updates: {
-                        is_read: true // Устанавливаем флаг прочтения
-                    }
+                    status: 'read'
                 });
             } catch (error) {
-                console.error("Не удалось обновить статус уведомления через универсальный эндпоинт:", error);
-                // При ошибке перезагружаем уведомления для синхронизации с сервером
+                console.error("Не удалось обновить статус уведомления:", error);
                 loadNotifications();
             }
         }
     };
 
-    // 5. Функция массового отметки всех уведомлений как прочитанных
     const markAllAsRead = async () => {
         if (!user || notifications.length === 0) return;
 
         try {
-            // Оптимистичное обновление UI
             setNotifications(prevNotifications =>
                 prevNotifications.map(not => ({ ...not, read: true }))
             );
 
-            // Для каждого непрочитанного уведомления вызываем обновление
             const unreadNotifications = notifications.filter(n => !n.read);
-            for (const not of unreadNotifications) {
-                await privateApi.post('/database/update/notification', {
+
+            // Отправляем запросы параллельно для скорости
+            await Promise.all(unreadNotifications.map(not =>
+                privateApi.post('/database/update/notification', {
                     id: not.id,
-                    updates: {
-                        is_read: true
-                    }
-                });
-            }
+                    status: 'read'
+                })
+            ));
+
         } catch (error) {
             console.error("Не удалось отметить все уведомления как прочитанные:", error);
             loadNotifications();
@@ -207,7 +201,7 @@ const Header = () => {
     const handleFloorChange = (e) => updateFilter('floor', e.target.value);
     const handleCorpusChange = (e) => updateFilter('corpus', e.target.value);
 
-    // Считаем количество непрочитанных уведомлений для бейджика
+    // Считаем количество непрочитанных (статус != 'read')
     const unreadCount = notifications.filter(n => !n.read).length;
 
     return (
@@ -290,14 +284,15 @@ const Header = () => {
                                                             <p className="notification-text">{not.text}</p>
                                                             <span className="notification-time">{not.time}</span>
                                                         </div>
-                                                        <button
-                                                            className={`read-button ${not.read ? 'read' : 'unread'}`}
-                                                            onClick={() => toggleReadStatus(not.id)}
-                                                            title={not.read ? "Отметить как непрочитанное" : "Отметить как прочитанное"}
-                                                            aria-label={not.read ? "Отметить как непрочитанное" : "Отметить как прочитанное"}
-                                                        >
-                                                            <CheckIcon />
-                                                        </button>
+                                                        {!not.read && (
+                                                            <button
+                                                                className={`read-button unread`}
+                                                                onClick={() => toggleReadStatus(not.id)}
+                                                                title="Отметить как прочитанное"
+                                                            >
+                                                                <CheckIcon />
+                                                            </button>
+                                                        )}
                                                     </li>
                                                 ))
                                             )}
@@ -361,7 +356,6 @@ const Header = () => {
                                 </select>
                             </div>
 
-                            {/* ФИЛЬТР ДАТЫ */}
                             <div className="filter-with-label">
                                 <label className="filter-label">Дата</label>
                                 <input
