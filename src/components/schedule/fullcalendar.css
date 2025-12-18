@@ -1,0 +1,86 @@
+/* Общий контейнер */
+.fc {
+  background-color: #ffffff;
+  color: #111827; /* почти чёрный */
+  font-family: inherit;
+}
+
+/* Заголовки дней недели */
+.fc-col-header-cell {
+  background-color: #f9fafb;
+  color: #111827;
+  font-weight: 500;
+  border-color: #e5e7eb;
+}
+
+/* Сетка */
+.fc-timegrid-slot,
+.fc-timegrid-axis,
+.fc-scrollgrid,
+.fc-scrollgrid td,
+.fc-scrollgrid th {
+  border-color: #e5e7eb;
+}
+
+/* Время слева */
+.fc-timegrid-axis-cushion {
+  color: #374151;
+  font-size: 12px;
+}
+
+/* Фон текущего дня */
+.fc-day-today {
+  background-color: #f1f5f9 !important;
+}
+
+.fc-event {
+  background-color: #f3f4f6; /* светло-серый */
+  border: 1px solid #111827; /* тёмный акцент */
+  color: #111827;
+  border-radius: 6px;
+  padding: 2px 4px;
+  font-size: 12px;
+}
+
+/* Текст события */
+.fc-event-title,
+.fc-event-time {
+  color: #111827;
+  font-weight: 500;
+}
+
+/* Hover */
+.fc-event:hover {
+  background-color: #e5e7eb;
+}
+
+/* Выделение свободного диапазона */
+.fc-highlight {
+  background-color: rgba(17, 24, 39, 0.08);
+}
+
+/* Кнопки навигации */
+.fc .fc-button {
+  background-color: #111827;
+  border: none;
+  color: #ffffff;
+  border-radius: 6px;
+  padding: 6px 12px;
+  text-transform: capitalize;
+}
+
+/* Hover кнопок */
+.fc .fc-button:hover {
+  background-color: #1f2937;
+}
+
+/* Активная кнопка */
+.fc .fc-button-primary:not(:disabled).fc-button-active {
+  background-color: #030712;
+}
+
+/* Disabled */
+.fc .fc-button:disabled {
+  background-color: #9ca3af;
+  color: #ffffff;
+}
