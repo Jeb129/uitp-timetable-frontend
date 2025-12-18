@@ -21,7 +21,7 @@ const MapPage = () => {
 
     // UI стейты
     const [mapMode, setMapMode] = useState('2d');
-    const [selectedRoom, setSelectedRoom] = useState(null); // Здесь хранится SVG ID (например, "101")
+    const [selectedRoom, setSelectedRoom] = useState(null);
     const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
 
     // Данные аудитории
@@ -40,21 +40,19 @@ const MapPage = () => {
         '2.5d': { 1: Floor1_2D, 2: Floor2_2D, 3: Floor3_2D, 4: Floor4_2D }
     };
 
-    // Хелпер: извлечение номера для SVG из номера в БД ("Б-101" -> "101")
+    // Хелперы
     const getSvgIdFromDbNumber = (dbNumber) => {
         if (!dbNumber) return null;
         const match = dbNumber.match(/(\d+)/);
         return match ? match[0] : null;
     };
 
-    // Хелпер: определение этажа по номеру (101 -> 1, 205 -> 2)
     const getFloorFromNumber = (numStr) => {
         if (!numStr) return 1;
         const match = numStr.match(/\d/);
         return match ? parseInt(match[0]) : 1;
     };
 
-    // Хелпер: определение типа
     const getTypeFromData = (equipment, description) => {
         const text = `${equipment} ${description}`.toLowerCase();
         if (text.includes('компьютер') || text.includes('пк')) {
@@ -69,25 +67,21 @@ const MapPage = () => {
         }
     }, [filters.floor]);
 
-    // Загрузка списка всех аудиторий для карты
+    // Загрузка списка всех аудиторий
     useEffect(() => {
         const fetchAllRooms = async () => {
             try {
-                // Запрашиваем все аудитории без фильтров
                 const response = await publicApi.post('/database/get/Classroom', {});
-
                 const roomsObj = {};
                 if (Array.isArray(response.data)) {
                     response.data.forEach(room => {
                         const svgId = getSvgIdFromDbNumber(room.number);
-
                         if (svgId) {
                             const floor = getFloorFromNumber(svgId);
                             const type = getTypeFromData(room.equipment, room.description);
-
                             roomsObj[svgId] = {
-                                dbId: room.id, // Сохраняем реальный ID записи
-                                number: room.number, // "Б-101"
+                                dbId: room.id,
+                                number: room.number,
                                 capacity: room.capacity,
                                 type: type,
                                 status: 'free',
@@ -107,41 +101,27 @@ const MapPage = () => {
     // Фильтрация
     const checkRoomFilters = (roomData, currentFilters) => {
         if (!roomData) return false;
-
-        if (currentFilters.floor && String(currentFilters.floor) !== '' && String(roomData.floor) !== String(currentFilters.floor)) {
-            return false;
-        }
-
+        if (currentFilters.floor && String(currentFilters.floor) !== '' && String(roomData.floor) !== String(currentFilters.floor)) return false;
         const filterCap = parseInt(currentFilters.minCapacity, 10);
         const roomCap = parseInt(roomData.capacity, 10);
-        if (!isNaN(filterCap) && filterCap > 0) {
-            if (roomCap < filterCap) return false;
-        }
-
-        if (currentFilters.roomType && currentFilters.roomType !== 'all') {
-            if (roomData.type !== currentFilters.roomType) return false;
-        }
-
+        if (!isNaN(filterCap) && filterCap > 0 && roomCap < filterCap) return false;
+        if (currentFilters.roomType && currentFilters.roomType !== 'all' && roomData.type !== currentFilters.roomType) return false;
         return true;
     };
 
     const getFilteredRooms = useMemo(() => {
         const filteredIds = [];
         Object.keys(allRoomsData).forEach(svgId => {
-            if (checkRoomFilters(allRoomsData[svgId], filters)) {
-                filteredIds.push(svgId);
-            }
+            if (checkRoomFilters(allRoomsData[svgId], filters)) filteredIds.push(svgId);
         });
         return filteredIds;
     }, [filters, allRoomsData]);
 
-    // Статистика
     useEffect(() => {
         const roomsArray = Object.values(allRoomsData);
         const targetFloor = filters.floor ? filters.floor.toString() : '1';
         const totalOnFloor = roomsArray.filter(r => String(r.floor) === targetFloor).length;
-        const foundCount = getFilteredRooms.length;
-        updateStats(foundCount, totalOnFloor);
+        updateStats(getFilteredRooms.length, totalOnFloor);
     }, [getFilteredRooms, filters.floor, updateStats, allRoomsData]);
 
     const handleFloorChange = (floor) => {
@@ -149,12 +129,11 @@ const MapPage = () => {
         updateFilter('floor', floor.toString());
     };
 
-    // --- ЗАПРОС ИНФОРМАЦИИ О КОНКРЕТНОЙ АУДИТОРИИ ---
+    // --- ЗАПРОС ИНФОРМАЦИИ ОБ АУДИТОРИИ ---
     const fetchRoomInfo = async (svgId) => {
         setLoading(true);
         setError(null);
         try {
-            // Используем жесткую привязку к корпусу "Б"
             const dbNumberSearch = `Б-${svgId}`;
 
             const response = await publicApi.post('/database/get/Classroom', {
@@ -181,16 +160,14 @@ const MapPage = () => {
                 const roomType = getTypeFromData(room.equipment, room.description);
 
                 setRoomInfo({
-                    id: room.id,          // Primary Key для бронирования
-                    name: room.number,    // "Б-101"
-                    svgId: svgId,         // "101"
+                    id: room.id,
+                    name: room.number,
+                    svgId: svgId,
                     type: roomType === 'computer' ? 'Компьютерный класс' : 'Лекционная',
                     capacity: room.capacity || 0,
                     equipment: equipmentList,
                     status: 'свободна',
                     description: room.description || '',
-                    // ИЗМЕНЕНИЕ: Формируем ссылку на панораму на фронтенде
-                    // Убедитесь, что файлы лежат в папке public (или assets) по пути, который ожидает CylindricalPanorama
                     panorama: `${svgId}.jpg`,
                     eios_id: room.eios_id
                 });
@@ -215,7 +192,7 @@ const MapPage = () => {
         fetchRoomInfo(svgId);
     };
 
-    // --- ПАРСИНГ ВРЕМЕНИ ---
+    // --- ПАРСИНГ ВРЕМЕНИ (ОБНОВЛЕНО) ---
     const parseTimeRange = (timeRangeStr) => {
         if (!timeRangeStr) return null;
         try {
@@ -223,11 +200,11 @@ const MapPage = () => {
             const [startH, startM] = startStr.split(':').map(Number);
             const [endH, endM] = endStr.split(':').map(Number);
 
-            const startTimeInMinutes = startH * 60 + startM;
-            const endTimeInMinutes = endH * 60 + endM;
-            const duration = endTimeInMinutes - startTimeInMinutes;
+            // Считаем длительность для отправки на бэк (она там требуется в required_fields)
+            const duration = (endH * 60 + endM) - (startH * 60 + startM);
 
-            return { startH, startM, duration };
+            // Возвращаем все компоненты
+            return { startH, startM, endH, endM, duration };
         } catch (e) {
             console.error("Ошибка парсинга времени", e);
             return null;
@@ -235,26 +212,22 @@ const MapPage = () => {
     };
 
     // --- БРОНИРОВАНИЕ ---
-    const handleBookRoom = async () => {
+    const handleBookRoom = async (bookingPurpose) => {
         if (!roomInfo || !roomInfo.id) {
-            alert("Ошибка: Не выбрана аудитория или отсутствуют данные");
+            alert("Ошибка: Не выбрана аудитория");
             return;
         }
-
         if (!user) {
             alert("Для бронирования необходимо авторизоваться");
             navigate('/login');
             return;
         }
-
-        const selectedTimeStr = filters.time;
-
-        if (!selectedTimeStr) {
-            alert("Пожалуйста, выберите время бронирования в верхней панели.");
+        if (!filters.time) {
+            alert("Пожалуйста, выберите время бронирования.");
             return;
         }
 
-        const timeData = parseTimeRange(selectedTimeStr);
+        const timeData = parseTimeRange(filters.time);
         if (!timeData || timeData.duration <= 0) {
             alert("Некорректный временной интервал.");
             return;
@@ -262,51 +235,65 @@ const MapPage = () => {
 
         setLoading(true);
         try {
-            const bookingDate = new Date();
-            bookingDate.setHours(timeData.startH, timeData.startM, 0, 0);
+            // 1. Устанавливаем дату и время НАЧАЛА
+            const startDate = new Date();
+            startDate.setHours(timeData.startH, timeData.startM, 0, 0);
 
             // Если время уже прошло сегодня, переносим на завтра
-            const now = new Date();
-            if (bookingDate < now) {
-                bookingDate.setDate(bookingDate.getDate() + 1);
+            if (startDate < new Date()) {
+                startDate.setDate(startDate.getDate() + 1);
             }
 
-            // Формируем ISO строку вручную в ЛОКАЛЬНОМ времени (без Z)
-            const year = bookingDate.getFullYear();
-            const month = String(bookingDate.getMonth() + 1).padStart(2, '0');
-            const day = String(bookingDate.getDate()).padStart(2, '0');
-            const hours = String(bookingDate.getHours()).padStart(2, '0');
-            const minutes = String(bookingDate.getMinutes()).padStart(2, '0');
-            const seconds = '00';
+            // 2. Устанавливаем дату и время ОКОНЧАНИЯ
+            // Клонируем startDate, чтобы сохранить тот же день (год/месяц/число)
+            const endDate = new Date(startDate);
+            endDate.setHours(timeData.endH, timeData.endM, 0, 0);
 
-            const localIsoDate = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+            // На случай, если интервал переходит через полночь (например 23:00 - 01:00),
+            // хотя для аудиторий это редкость, но для надежности:
+            if (endDate <= startDate) {
+                endDate.setDate(endDate.getDate() + 1);
+            }
 
-            console.log("Отправка бронирования:", {
-                classroom_number: roomInfo.id,
-                date: localIsoDate,
+            // 3. Формируем Local ISO строки
+            const toLocalISO = (date) => {
+                const pad = (n) => String(n).padStart(2, '0');
+                const year = date.getFullYear();
+                const month = pad(date.getMonth() + 1);
+                const day = pad(date.getDate());
+                const hours = pad(date.getHours());
+                const minutes = pad(date.getMinutes());
+                const seconds = '00';
+                return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+            };
+
+            const dateStartISO = toLocalISO(startDate);
+            const dateEndISO = toLocalISO(endDate);
+
+            const payload = {
+                classroom_id: roomInfo.id,
+                date_start: dateStartISO,
+                date_end: dateEndISO,
                 duration: timeData.duration,
-                user_id: user.id
-            });
+                user_id: user.id,
+                description: bookingPurpose
+            };
 
-            await privateApi.post('/booking/create', {
-                classroom_number: roomInfo.id,
-                date: localIsoDate,
-                duration: timeData.duration,
-                user_id: user.id
-            });
+            console.log("Отправка бронирования:", payload);
 
-            const displayDate = bookingDate.toLocaleDateString();
+            await privateApi.post('/booking/create', payload);
 
-            alert(`Заявка успешно создана!\nАудитория: ${roomInfo.name}\nДата: ${displayDate}\nВремя: ${selectedTimeStr}`);
+            const displayDate = startDate.toLocaleDateString();
+            alert(`Заявка успешно создана!\nАудитория: ${roomInfo.name}\nЦель: ${bookingPurpose}\nДата: ${displayDate}\nВремя: ${filters.time}`);
             handleCloseModal();
 
         } catch (err) {
             console.error('Ошибка при бронировании:', err);
             let errMsg = 'Произошла ошибка при бронировании.';
-            if (err.response && err.response.data && err.response.data.error) {
-                errMsg += `\nДетали: ${err.response.data.error}`;
-            } else if (err.response && err.response.data && err.response.data.message) {
+            if (err.response && err.response.data && err.response.data.message) {
                 errMsg += `\n${err.response.data.message}`;
+            } else if (err.response && err.response.data && err.response.data.error) {
+                errMsg += `\n${err.response.data.error}`;
             }
             alert(errMsg);
         } finally {

@@ -112,7 +112,7 @@ const RoomModal = ({ roomInfo, isOpen, onClose, onBook, loading, error }) => {
                                                     {filters.time}
                                                 </span>
                                             ) : (
-                                                <span style={{color: '#d9534f', fontStyle: 'italic'}}>
+                                                <span style={{color: "black", fontStyle: 'italic'}}>
                                                     Время не выбрано
                                                 </span>
                                             )}
@@ -143,6 +143,7 @@ const RoomModal = ({ roomInfo, isOpen, onClose, onBook, loading, error }) => {
                                             onChange={(e) => setBookingPurpose(e.target.value)}
                                             placeholder="Например: Лекция по матанализу, мероприятие Студсовета..."
                                             style={{
+                                                color: "black",
                                                 width: '100%',
                                                 padding: '10px',
                                                 border: '1px solid #ddd',
