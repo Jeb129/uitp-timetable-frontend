@@ -1,13 +1,44 @@
+// src/components/modals/TimeRangeModal.jsx
 import React, { useState, useRef } from 'react';
 import './TimeRangeModal.css';
 
 const TimeRangeModal = ({ onClose, onSelect, selectedTime }) => {
-    const [startTime, setStartTime] = useState(8 * 60);
-    const [endTime, setEndTime] = useState(9 * 60);
+    // Вспомогательная функция для парсинга времени (HH:MM -> минуты)
+    const parseTimeStr = (str) => {
+        if (!str) return null;
+        const [hours, mins] = str.split(':').map(Number);
+        return hours * 60 + mins;
+    };
+
+    // Инициализация начального времени из selectedTime
+    const getInitialStartTime = () => {
+        if (selectedTime) {
+            const [startStr] = selectedTime.split(' - ');
+            const mins = parseTimeStr(startStr);
+            if (mins !== null) return mins;
+        }
+        return 8 * 60; // Дефолт 8:00
+    };
+
+    // Инициализация конечного времени из selectedTime
+    const getInitialEndTime = () => {
+        if (selectedTime) {
+            const [, endStr] = selectedTime.split(' - ');
+            const mins = parseTimeStr(endStr);
+            if (mins !== null) return mins;
+        }
+        return 9 * 60; // Дефолт 9:00
+    };
+
+    const [startTime, setStartTime] = useState(getInitialStartTime);
+    const [endTime, setEndTime] = useState(getInitialEndTime);
+
     const sliderRef = useRef(null);
     const dragState = useRef({ activeHandle: null, startX: 0, startTime: 0, endTime: 0 });
 
     const minInterval = 15;
+    const minTimeLimit = 8 * 60;  // 8:00
+    const maxTimeLimit = 20 * 60; // 20:00
 
     const minutesToTimeString = (minutes) => {
         const hours = Math.floor(minutes / 60);
@@ -16,16 +47,7 @@ const TimeRangeModal = ({ onClose, onSelect, selectedTime }) => {
     };
 
     const getPosition = (minutes) => {
-        return ((minutes - 8 * 60) / (20 * 60 - 8 * 60)) * 100;
-    };
-
-    const getMinutesFromPosition = (clientX) => {
-        if (!sliderRef.current) return 0;
-        const slider = sliderRef.current;
-        const rect = slider.getBoundingClientRect();
-        let percent = ((clientX - rect.left) / rect.width) * 100;
-        percent = Math.max(0, Math.min(100, percent));
-        return Math.round(8 * 60 + (percent / 100) * (20 * 60 - 8 * 60));
+        return ((minutes - minTimeLimit) / (maxTimeLimit - minTimeLimit)) * 100;
     };
 
     const handleMouseDown = (handleType, e) => {
@@ -42,16 +64,17 @@ const TimeRangeModal = ({ onClose, onSelect, selectedTime }) => {
             if (!activeHandle) return;
 
             const deltaX = e.clientX - startX;
-            const deltaMinutes = Math.round((deltaX / sliderRef.current.offsetWidth) * (20 * 60 - 8 * 60));
+            const totalMinutes = maxTimeLimit - minTimeLimit;
+            const deltaMinutes = Math.round((deltaX / sliderRef.current.offsetWidth) * totalMinutes);
 
             if (activeHandle === 'start') {
                 let newStartTime = dragStart + deltaMinutes;
-                newStartTime = Math.max(8 * 60, Math.min(newStartTime, endTime - minInterval));
+                newStartTime = Math.max(minTimeLimit, Math.min(newStartTime, endTime - minInterval));
                 newStartTime = Math.floor(newStartTime / 15) * 15;
                 setStartTime(newStartTime);
             } else {
                 let newEndTime = dragEnd + deltaMinutes;
-                newEndTime = Math.max(startTime + minInterval, Math.min(newEndTime, 20 * 60));
+                newEndTime = Math.max(startTime + minInterval, Math.min(newEndTime, maxTimeLimit));
                 newEndTime = Math.ceil(newEndTime / 15) * 15;
                 setEndTime(newEndTime);
             }
@@ -68,8 +91,14 @@ const TimeRangeModal = ({ onClose, onSelect, selectedTime }) => {
     };
 
     const handleQuickSelect = (hours) => {
-        setStartTime(8 * 60);
-        setEndTime((8 + hours) * 60);
+        const durationMinutes = hours * 60;
+        let newEndTime = startTime + durationMinutes;
+
+        if (newEndTime > maxTimeLimit) {
+            newEndTime = maxTimeLimit;
+        }
+
+        setEndTime(newEndTime);
     };
 
     const handleApply = () => {
@@ -90,7 +119,7 @@ const TimeRangeModal = ({ onClose, onSelect, selectedTime }) => {
 
                 <div className="time-range-modal-content">
                     <div className="quick-select-section">
-                        <h3>Быстрый выбор:</h3>
+                        <h3>Быстрый выбор (от {minutesToTimeString(startTime)}):</h3>
                         <div className="quick-buttons">
                             <button onClick={() => handleQuickSelect(1)}>1 час</button>
                             <button onClick={() => handleQuickSelect(2)}>2 часа</button>

@@ -1,131 +1,182 @@
 // src/pages/ProfilePage.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-// import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
+import { privateApi } from '../utils/api/axios';
 import './ProfilePage.css';
 
 const ProfilePage = () => {
-    // const { user, logout } = useAuth();
+    const { user, logout } = useAuth();
     const navigate = useNavigate();
+
+    // --- Стейты UI ---
     const [activeTab, setActiveTab] = useState('info');
-    const [viewMode, setViewMode] = useState('cards'); // 'cards' или 'table'
+    const [viewMode, setViewMode] = useState('cards');
 
-    // const handleLogout = () => {
-    //     logout();
-    //     navigate('/login');
-    // };
-    //
-    // if (!user) {
-    //     return <div>Загрузка...</div>;
-    // }
-
-    // Моковые данные для демонстрации
-    const userInfo = {
-        // login: user.login,
-        login: "user",
-        email: "user@example.com",
-        fullName: "Иванов Иван Иванович",
-        // role: user.role === 'external' ? "Внешний пользователь" : "Сотрудник/Студент",
+    // --- Стейты Данных ---
+    const [userInfo, setUserInfo] = useState({
+        email: "",
         role: "Внешний пользователь",
-        phone: "+7 (999) 123-45-67",
-        department: "Факультет информационных технологий"
-    };
+        isConfirmed: false
+    });
 
-    // Моковые данные бронирований
-    const bookings = [
-        {
-            id: 1,
-            room: "Аудитория 101",
-            date: "2024-01-15",
-            time: "10:00 - 12:00",
-            status: "Подтверждено",
-            equipment: ["Проектор", "Микрофон"]
-        },
-        {
-            id: 2,
-            room: "Аудитория 205",
-            date: "2024-01-16",
-            time: "14:00 - 15:30",
-            status: "На модерации",
-            equipment: ["Интерактивная доска"]
-        },
-        {
-            id: 3,
-            room: "Конференц-зал",
-            date: "2024-01-17",
-            time: "16:00 - 18:00",
-            status: "Отклонено",
-            equipment: ["Проектор", "Звуковая система"]
-        },
-        {
-            id: 1,
-            room: "Аудитория 101",
-            date: "2024-01-15",
-            time: "10:00 - 12:00",
-            status: "Подтверждено",
-            equipment: ["Проектор", "Микрофон"]
-        },
-        {
-            id: 2,
-            room: "Аудитория 205",
-            date: "2024-01-16",
-            time: "14:00 - 15:30",
-            status: "На модерации",
-            equipment: ["Интерактивная доска"]
-        },
-        {
-            id: 1,
-            room: "Аудитория 101",
-            date: "2024-01-15",
-            time: "10:00 - 12:00",
-            status: "Подтверждено",
-            equipment: ["Проектор", "Микрофон"]
-        },
-        {
-            id: 2,
-            room: "Аудитория 205",
-            date: "2024-01-16",
-            time: "14:00 - 15:30",
-            status: "На модерации",
-            equipment: ["Интерактивная доска"]
-        },
-        {
-            id: 1,
-            room: "Аудитория 101",
-            date: "2024-01-15",
-            time: "10:00 - 12:00",
-            status: "Подтверждено",
-            equipment: ["Проектор", "Микрофон"]
-        },
-        {
-            id: 2,
-            room: "Аудитория 205",
-            date: "2024-01-16",
-            time: "14:00 - 15:30",
-            status: "На модерации",
-            equipment: ["Интерактивная доска"]
-        }
-    ];
+    const [bookings, setBookings] = useState([]);
+    const [loadingBookings, setLoadingBookings] = useState(false);
 
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'Подтверждено': return 'status-confirmed';
-            case 'На модерации': return 'status-pending';
-            case 'Отклонено': return 'status-rejected';
-            default: return '';
+    // Хелпер для отображения названия роли
+    const getRoleName = (role) => {
+        switch (role) {
+            case 'admin': return 'Администратор';
+            case 'kgu': return 'Пользователь КГУ';
+            case 'user': return 'Внешний пользователь';
+            default: return role || 'Гость';
         }
     };
 
-    const toggleViewMode = () => {
-        setViewMode(viewMode === 'cards' ? 'table' : 'cards');
+    // --- Инициализация данных пользователя ---
+    useEffect(() => {
+        const fetchUserData = async () => {
+            if (user) {
+                // 1. Устанавливаем данные из контекста/токена
+                setUserInfo({
+                    email: user.email || "",
+                    role: getRoleName(user.role),
+                    isConfirmed: false // По умолчанию, пока не загрузим с бэка
+                });
+
+                try {
+                    // 2. Запрашиваем актуальный статус из БД
+                    const response = await privateApi.post('/database/get/User', {
+                        id: user.id
+                    });
+
+                    const userData = Array.isArray(response.data) ? response.data[0] : response.data;
+
+                    if (userData) {
+                        setUserInfo({
+                            email: userData.email,
+                            role: getRoleName(userData.role),
+                            isConfirmed: userData.confirmed || false
+                        });
+                    }
+                } catch (error) {
+                    console.error("Ошибка получения данных пользователя:", error);
+                }
+            }
+        };
+
+        fetchUserData();
+    }, [user]);
+
+    // --- Логика Бронирований ---
+
+    const mapBackendBookingToFrontend = (bk) => {
+        const startDate = new Date(bk.date_start);
+        const endDate = new Date(bk.date_end);
+
+        const dateStr = startDate.toLocaleDateString('ru-RU');
+        const startTimeStr = startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const endTimeStr = endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        let statusStr = 'pending';
+        if (bk.status === true) statusStr = 'confirmed';
+        if (bk.status === false) statusStr = 'rejected';
+
+        // Формируем название комнаты
+        const roomName = bk.classroom_number
+            ? `Аудитория ${bk.classroom_number}`
+            : `Аудитория (ID: ${bk.classroom_id})`;
+
+        return {
+            id: bk.id,
+            room: roomName,
+            date: dateStr,
+            time: `${startTimeStr} - ${endTimeStr}`,
+            status: statusStr,
+            equipment: []
+        };
     };
+
+    // Загрузка бронирований с "обогащением" данными об аудитории
+    useEffect(() => {
+        const fetchBookings = async () => {
+            if (user && user.id) {
+                setLoadingBookings(true);
+                try {
+                    // 1. Получаем список бронирований
+                    const response = await privateApi.post('/database/get/Booking', {
+                        user_id: user.id
+                    });
+
+                    const bookingsData = Array.isArray(response.data) ? response.data : [response.data];
+
+                    // 2. Подгружаем номера аудиторий
+                    const enrichedBookings = await Promise.all(bookingsData.map(async (booking) => {
+                        try {
+                            const roomResponse = await privateApi.post('/database/get/Classroom', {
+                                id: booking.classroom_id
+                            });
+
+                            const roomData = Array.isArray(roomResponse.data)
+                                ? roomResponse.data[0]
+                                : roomResponse.data;
+
+                            return {
+                                ...booking,
+                                classroom_number: roomData ? roomData.number : null
+                            };
+                        } catch (err) {
+                            return booking;
+                        }
+                    }));
+
+                    const mappedData = enrichedBookings.map(mapBackendBookingToFrontend);
+                    mappedData.sort((a, b) => b.id - a.id); // Новые сверху
+
+                    setBookings(mappedData);
+                } catch (error) {
+                    console.error("Ошибка загрузки бронирований:", error);
+                } finally {
+                    setLoadingBookings(false);
+                }
+            }
+        };
+
+        if (activeTab === 'bookings') {
+            fetchBookings();
+        }
+    }, [user, activeTab]);
+
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
+
+    const getStatusColor = (s) => (s==='confirmed'?'status-confirmed':s==='pending'?'status-pending':'status-rejected');
+    const translateStatus = (s) => (s==='pending'?'На модерации':s==='confirmed'?'Подтверждено':s==='rejected'?'Отклонено':s);
+    const toggleViewMode = () => setViewMode(viewMode === 'cards' ? 'table' : 'cards');
+
+    // Если пользователь не авторизован
+    // if (!user) {
+    //     return (
+    //         <div className="profile-page">
+    //             <div style={{color: "black", textAlign: 'center', marginTop: '50px'}}>
+    //                 <h2>Доступ запрещен</h2>
+    //                 <p>Пожалуйста, войдите в систему.</p>
+    //                 <button className="login-button" onClick={() => navigate('/login')} style={{marginTop: '20px'}}>
+    //                     Войти
+    //                 </button>
+    //             </div>
+    //         </div>
+    //     );
+    // }
 
     return (
         <div className="profile-page">
             <div className="profile-container">
                 <div className="profile-header">
                     <h2>Профиль пользователя</h2>
-                    <p>Добро пожаловать, {userInfo.login}!</p>
+                    <p>Добро пожаловать!</p>
                 </div>
 
                 <div className="profile-tabs">
@@ -147,41 +198,42 @@ const ProfilePage = () => {
                     {activeTab === 'info' && (
                         <div className="info-tab">
                             <div className="user-info-card">
-                                <h3>Личная информация</h3>
+                                <h3>Учетная запись</h3>
                                 <div className="info-grid">
-                                    <div className="info-item">
-                                        <label>Логин:</label>
-                                        <span>{userInfo.login}</span>
-                                    </div>
-                                    <div className="info-item">
-                                        <label>ФИО:</label>
-                                        <span>{userInfo.fullName}</span>
-                                    </div>
                                     <div className="info-item">
                                         <label>Email:</label>
                                         <span>{userInfo.email}</span>
                                     </div>
-                                    <div className="info-item">
-                                        <label>Телефон:</label>
-                                        <span>{userInfo.phone}</span>
-                                    </div>
+
                                     <div className="info-item">
                                         <label>Роль:</label>
                                         <span>{userInfo.role}</span>
                                     </div>
+
                                     <div className="info-item">
-                                        <label>Отдел/Факультет:</label>
-                                        <span>{userInfo.department}</span>
+                                        <label>Статус аккаунта:</label>
+                                        <span className={userInfo.isConfirmed ? "status-confirmed-text" : "status-pending-text"}>
+                                            {userInfo.isConfirmed ? "Подтвержден (СДО)" : "Не подтвержден"}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="profile-actions">
-                                <button className="edit-button">Редактировать профиль</button>
-                                <button
-                                    // onClick={handleLogout}
-                                    className="logout-button">
-                                    Выйти из аккаунта
+                            <div className="profile-actions" style={{display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
+                                {/* Кнопку подтверждения показываем, только если аккаунт еще не подтвержден и это не админ */}
+                                {/* Используем user?.role с безопасным доступом */}
+                                {!userInfo.isConfirmed && user?.role !== 'admin' && (
+                                    <button
+                                        className="edit-button"
+                                        style={{backgroundColor: '#28a745'}}
+                                        onClick={() => navigate('/kgu-confirm')}
+                                    >
+                                        Подтвердить аккаунт КГУ
+                                    </button>
+                                )}
+
+                                <button onClick={handleLogout} className="logout-button">
+                                    Выйти
                                 </button>
                             </div>
                         </div>
@@ -191,21 +243,21 @@ const ProfilePage = () => {
                         <div className="bookings-tab">
                             <div className="bookings-header">
                                 <h3>Мои бронирования</h3>
-                                <button
-                                    className="view-toggle-button"
-                                    onClick={toggleViewMode}
-                                >
+                                <button className="view-toggle-button" onClick={toggleViewMode}>
                                     {viewMode === 'cards' ? 'Таблица' : 'Карточки'}
                                 </button>
                             </div>
-                            {bookings.length === 0 ? (
+
+                            {loadingBookings ? (
+                                <div style={{textAlign: 'center', padding: '30px', color: '#666'}}>Загрузка бронирований...</div>
+                            ) : bookings.length === 0 ? (
                                 <div className="no-bookings">
-                                    <p>У вас пока нет бронирований</p>
+                                    <p>У вас пока нет активных бронирований</p>
                                     <button
                                         className="book-room-button"
-                                        onClick={() => navigate('/booking')}
+                                        onClick={() => navigate('/map')}
                                     >
-                                        Забронировать аудиторию
+                                        Перейти к бронированию
                                     </button>
                                 </div>
                             ) : viewMode === 'cards' ? (
@@ -215,7 +267,7 @@ const ProfilePage = () => {
                                             <div className="booking-header">
                                                 <h4>{booking.room}</h4>
                                                 <span className={`status-badge ${getStatusColor(booking.status)}`}>
-                                                    {booking.status}
+                                                    {translateStatus(booking.status)}
                                                 </span>
                                             </div>
                                             <div className="booking-details">
@@ -223,16 +275,10 @@ const ProfilePage = () => {
                                                     <span className="booking-date">{booking.date}</span>
                                                     <span className="booking-time">{booking.time}</span>
                                                 </div>
-                                                {booking.equipment.length > 0 && (
-                                                    <div className="booking-equipment">
-                                                        <strong>Оборудование:</strong>
-                                                        {booking.equipment.join(', ')}
-                                                    </div>
-                                                )}
                                             </div>
                                             <div className="booking-actions">
                                                 <button className="action-button view">Подробнее</button>
-                                                {booking.status === 'На модерации' && (
+                                                {booking.status === 'pending' && (
                                                     <button className="action-button cancel">Отменить</button>
                                                 )}
                                             </div>
@@ -260,9 +306,9 @@ const ProfilePage = () => {
                                                 <td className="booking-date">{booking.date}</td>
                                                 <td className="booking-time">{booking.time}</td>
                                                 <td>
-                                                        <span className={`status-badge ${getStatusColor(booking.status)}`}>
-                                                            {booking.status}
-                                                        </span>
+                                                    <span className={`status-badge ${getStatusColor(booking.status)}`}>
+                                                        {translateStatus(booking.status)}
+                                                    </span>
                                                 </td>
                                             </tr>
                                         ))}

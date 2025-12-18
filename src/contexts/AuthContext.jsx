@@ -1,51 +1,67 @@
-// src/contexts/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { login as apiLogin, logout as apiLogout } from '../utils/api/auth';
+import { privateApi } from '../utils/api/axios';
 
 const AuthContext = createContext();
 
-const isAdmin = () => {
-    return user && user.role === 'admin';
+export const useAuth = () => {
+    return useContext(AuthContext);
 };
 
-export const useAuth = () => {
-    const context = useContext(AuthContext);
-    if (!context) {
-        throw new Error('useAuth must be used within an AuthProvider');
+// Вспомогательная функция (оставляем, чтобы доставать роль из токена без запроса к БД)
+const parseJwt = (token) => {
+    try {
+        return JSON.parse(atob(token.split('.')[1]));
+    } catch (e) {
+        return null;
     }
-    return context;
 };
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null); // null = не авторизован
+    const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Проверяем, есть ли токен в localStorage (или где-то ещё)
-    useEffect(() => {
-        const token = localStorage.getItem('token');
+    // Функция инициализации пользователя из токена
+    const initializeUser = () => {
+        const token = localStorage.getItem('access_token');
         if (token) {
-            // Запрос на бэк
-            // setUser(...);
+            const decoded = parseJwt(token);
+            // Проверка срока действия (exp в секундах)
+            if (decoded && decoded.exp * 1000 > Date.now()) {
+                setUser({
+                    id: decoded.user_id,
+                    role: decoded.role,
+                    email: decoded.sub || decoded.email // Поле зависит от того, как бэк собирает токен
+                });
+            }
         }
         setLoading(false);
+    };
+
+    useEffect(() => {
+        initializeUser();
     }, []);
 
-    const login = (userData) => {
-        // Здесь будет запрос на бэк
-        setUser(userData);
-        localStorage.setItem('token', 'fake-token'); // Пример
+    // Обертка над apiLogin
+    const login = async (email, password) => {
+        // Вызываем функцию из auth.js
+        // Она сама сохраняет токены в localStorage
+        await apiLogin(email, password);
+
+        // После успешного входа обновляем стейт
+        initializeUser();
     };
 
     const logout = () => {
+        apiLogout(); // Чистит storage и делает reload
         setUser(null);
-        localStorage.removeItem('token');
     };
 
     const value = {
         user,
         login,
         logout,
-        loading,
-        isAdmin,
+        loading
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

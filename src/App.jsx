@@ -5,7 +5,6 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AppLayout from './components/AppLayout';
 import CalendarPage from './pages/CalendarPage';
 import MapPage from './pages/MapPage';
-import AuditoriumsPage from './pages/AuditoriumsPage';
 import SchedulePage from './pages/SchedulePage';
 import KGUPage from './pages/KGUPage';
 import ProfilePage from './pages/ProfilePage.jsx';
@@ -13,6 +12,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import RulesPage from './pages/RulesPage';
 import AdminPage from "./pages/AdminPage.jsx";
+import KGUConfirmPage from "./pages/KGUConfirmPage.jsx";
 import { FilterProvider } from './contexts/FilterContext';
 
 
@@ -63,11 +63,6 @@ const AppContent = () => {
                         <MapPage />
                     </AppLayout>
             } />
-            <Route path="/auditoriums" element={
-                <AppLayout>
-                    <AuditoriumsPage />
-                </AppLayout>
-            } />
             <Route path="/schedule" element={
                 <AppLayout>
                     <SchedulePage />
@@ -112,6 +107,11 @@ const AppContent = () => {
             <Route path="/rules" element={
                 <AppLayout>
                     <RulesPage />
+                </AppLayout>
+            } />
+            <Route path="/kgu-confirm" element={
+                <AppLayout>
+                    <KGUConfirmPage />
                 </AppLayout>
             } />
         </Routes>
