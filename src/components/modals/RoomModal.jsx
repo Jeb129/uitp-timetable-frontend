@@ -1,10 +1,16 @@
 // src/components/modals/RoomModal.jsx
 import React, { useState } from 'react';
 import CylindricalPanorama from '../CylindricalPanorama';
+import TimeRangeModal from './TimeRangeModal';
+import { useFilters } from '../../contexts/FilterContext';
 import './RoomModal.css';
 
 const RoomModal = ({ roomInfo, isOpen, onClose, onBook, loading, error }) => {
     const [showPanorama, setShowPanorama] = useState(false);
+    const [showTimePicker, setShowTimePicker] = useState(false);
+
+    // Подключаемся к глобальному фильтру
+    const { filters, updateFilter } = useFilters();
 
     if (!isOpen) return null;
 
@@ -16,8 +22,19 @@ const RoomModal = ({ roomInfo, isOpen, onClose, onBook, loading, error }) => {
         setShowPanorama(false);
     };
 
-    // Проверяем, есть ли панорама для этой аудитории
+    // При выборе времени обновляем глобальный контекст
+    const handleTimeSelect = (timeRange) => {
+        updateFilter('time', timeRange);
+        setShowTimePicker(false);
+    };
+
     const hasPanorama = roomInfo && roomInfo.panorama;
+
+    // Блокируем кнопку, если время не выбрано
+    const isBookDisabled = !roomInfo ||
+        roomInfo.status !== 'свободна' ||
+        loading ||
+        !filters.time;
 
     return (
         <>
@@ -74,9 +91,44 @@ const RoomModal = ({ roomInfo, isOpen, onClose, onBook, loading, error }) => {
                                             <span className="value">{roomInfo.description}</span>
                                         </div>
                                     )}
+
+                                    {/* --- Блок выбора времени --- */}
+                                    <div className="detail-row time-selection-section" style={{
+                                        marginTop: '15px',
+                                        borderTop: '1px solid #eee',
+                                        paddingTop: '15px'
+                                    }}>
+                                        <span className="label">Время бронирования:</span>
+                                        <div className="value" style={{display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap'}}>
+                                            {filters.time ? (
+                                                <span style={{fontWeight: 'bold', color: '#0056b3', fontSize: '1.1rem'}}>
+                                                    {filters.time}
+                                                </span>
+                                            ) : (
+                                                <span style={{color: '#d9534f', fontStyle: 'italic'}}>
+                                                    Время не выбрано
+                                                </span>
+                                            )}
+
+                                            <button
+                                                className="btn-text"
+                                                onClick={() => setShowTimePicker(true)}
+                                                style={{
+                                                    padding: '6px 12px',
+                                                    fontSize: '0.9rem',
+                                                    background: '#f8f9fa',
+                                                    border: '1px solid #dee2e6',
+                                                    borderRadius: '4px',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s'
+                                                }}
+                                            >
+                                                {filters.time ? 'Изменить' : 'Выбрать время'}
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                {/* Кнопка для открытия панорамы */}
                                 {hasPanorama && (
                                     <div className="panorama-section">
                                         <button
@@ -90,10 +142,13 @@ const RoomModal = ({ roomInfo, isOpen, onClose, onBook, loading, error }) => {
                                 )}
 
                                 <div className="modal-actions">
+                                    {/* ID передается в функцию бронирования, а время берется из контекста внутри MapPage */}
                                     <button
                                         className="btn btn-primary"
                                         onClick={() => onBook(roomInfo.id)}
-                                        disabled={roomInfo.status !== 'свободна' || loading}
+                                        disabled={isBookDisabled}
+                                        title={!filters.time ? "Сначала выберите время" : ""}
+                                        style={!filters.time ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
                                     >
                                         {loading ? 'Бронирование...' : 'Забронировать'}
                                     </button>
@@ -111,11 +166,20 @@ const RoomModal = ({ roomInfo, isOpen, onClose, onBook, loading, error }) => {
                 </div>
             </div>
 
-            {/* Модалка с 3D панорамой */}
+            {/* Модалка с панорамой */}
             {showPanorama && hasPanorama && (
                 <CylindricalPanorama
                     imageUrl={roomInfo.panorama}
                     onClose={handleClosePanorama}
+                />
+            )}
+
+            {/* Модалка выбора времени */}
+            {showTimePicker && (
+                <TimeRangeModal
+                    onClose={() => setShowTimePicker(false)}
+                    onSelect={handleTimeSelect}
+                    selectedTime={filters.time}
                 />
             )}
         </>
