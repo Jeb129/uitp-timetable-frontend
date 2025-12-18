@@ -7,6 +7,7 @@ import { privateApi } from '../utils/api/axios';
 import BellIcon from './icons/header/BellIcon';
 import ProfileIcon from './icons/header/ProfileIcon';
 import HelpIcon from './icons/header/HelpIcon';
+import CheckIcon from './icons/header/CheckIcon';
 import RulesModal from './modals/RulesModal.jsx';
 import TimeRangeModal from './modals/TimeRangeModal.jsx';
 import './Header.css';
@@ -52,22 +53,18 @@ const Header = () => {
         }
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // --- ЛОГИКА УВЕДОМЛЕНИЙ ---
+    // --- ЛОГИКА УВЕДОМЛЕНИЙ С УНИВЕРСАЛЬНЫМИ ЭНДПОИНТАМИ ---
 
-    // Функция загрузки уведомлений
+    // 1. Функция загрузки уведомлений через универсальный эндпоинт
     const loadNotifications = useCallback(async () => {
         if (!user) return;
         try {
-            // Используем универсальный эндпоинт для получения уведомлений
-            const response = await privateApi.post('/database/get/Notification', {
-                filters: {
-                    user_id: user.id, // Получаем только уведомления текущего пользователя
-                },
-                sort_by: 'created_at', // Сортируем по дате создания
-                sort_order: 'desc' // Новые первыми
+            // Используем универсальный эндпоинт для получения уведомлений текущего пользователя
+            const response = await privateApi.post('/database/get/notification', {
+                    user_id: user.id, // Фильтруем по ID пользователя
             });
 
-            // Обрабатываем ответ
+            // Обрабатываем ответ от универсального эндпоинта
             const data = response.data?.results || response.data || [];
             const notificationsArray = Array.isArray(data) ? data : [data];
 
@@ -75,35 +72,83 @@ const Header = () => {
                 id: n.id,
                 text: n.message || 'Без текста',
                 time: formatRelativeTime(n.created_at),
-                read: n.is_read || false // Предполагаем, что есть поле is_read
+                read: n.is_read || false // Предполагаем наличие поля is_read в модели
             }));
 
             setNotifications(mappedNotifications);
         } catch (error) {
-            console.error("Ошибка получения уведомлений:", error);
+            console.error("Ошибка получения уведомлений через универсальный эндпоинт:", error);
             setNotifications([]);
         }
     }, [user]);
 
-    // Загружаем уведомления при входе (чтобы показать красную точку)
+    // 2. Загружаем уведомления при монтировании компонента
     useEffect(() => {
         loadNotifications();
     }, [loadNotifications]);
 
-    // Обновленная функция клика по колокольчику
+    // 3. Функция переключения отображения уведомлений
     const toggleNotifications = () => {
         const newState = !showNotifications;
         setShowNotifications(newState);
 
-        // Если открываем окно - обновляем данные
+        // Если открываем окно уведомлений - обновляем данные
         if (newState) {
             loadNotifications();
         }
     };
 
-    // Считаем непрочитанные для бейджика
-    const unreadCount = notifications.filter(n => !n.read).length;
+    // 4. Функция отметки уведомления как прочитанного через универсальный эндпоинт
+    const toggleReadStatus = async (id) => {
+        // Оптимистичное обновление UI
+        setNotifications(prevNotifications =>
+            prevNotifications.map(not =>
+                not.id === id ? { ...not, read: !not.read } : not
+            )
+        );
 
+        if (user) {
+            try {
+                // Используем универсальный эндпоинт обновления
+                await privateApi.post('/database/update/notification', {
+                    id: id,
+                    updates: {
+                        is_read: true // Устанавливаем флаг прочтения
+                    }
+                });
+            } catch (error) {
+                console.error("Не удалось обновить статус уведомления через универсальный эндпоинт:", error);
+                // При ошибке перезагружаем уведомления для синхронизации с сервером
+                loadNotifications();
+            }
+        }
+    };
+
+    // 5. Функция массового отметки всех уведомлений как прочитанных
+    const markAllAsRead = async () => {
+        if (!user || notifications.length === 0) return;
+
+        try {
+            // Оптимистичное обновление UI
+            setNotifications(prevNotifications =>
+                prevNotifications.map(not => ({ ...not, read: true }))
+            );
+
+            // Для каждого непрочитанного уведомления вызываем обновление
+            const unreadNotifications = notifications.filter(n => !n.read);
+            for (const not of unreadNotifications) {
+                await privateApi.post('/database/update/notification', {
+                    id: not.id,
+                    updates: {
+                        is_read: true
+                    }
+                });
+            }
+        } catch (error) {
+            console.error("Не удалось отметить все уведомления как прочитанные:", error);
+            loadNotifications();
+        }
+    };
     // --- КОНЕЦ ЛОГИКИ УВЕДОМЛЕНИЙ ---
 
     useEffect(() => {
@@ -162,6 +207,9 @@ const Header = () => {
     const handleFloorChange = (e) => updateFilter('floor', e.target.value);
     const handleCorpusChange = (e) => updateFilter('corpus', e.target.value);
 
+    // Считаем количество непрочитанных уведомлений для бейджика
+    const unreadCount = notifications.filter(n => !n.read).length;
+
     return (
         <>
             <header className="header">
@@ -179,38 +227,77 @@ const Header = () => {
                     <div className="header-actions">
                         {user && (
                             <div className="notification-dropdown">
-                                <button className="icon-btn" onClick={toggleNotifications} style={{position: 'relative'}}>
+                                <button
+                                    className="icon-btn"
+                                    onClick={toggleNotifications}
+                                    style={{position: 'relative'}}
+                                    aria-label="Уведомления"
+                                >
                                     <BellIcon />
                                     {unreadCount > 0 && (
-                                        <span className="notification-badge" style={{
-                                            position: 'absolute',
-                                            top: '5px',
-                                            right: '5px',
-                                            width: '8px',
-                                            height: '8px',
-                                            backgroundColor: 'red',
-                                            borderRadius: '50%'
-                                        }}></span>
+                                        <span
+                                            className="notification-badge"
+                                            style={{
+                                                position: 'absolute',
+                                                top: '5px',
+                                                right: '5px',
+                                                width: '8px',
+                                                height: '8px',
+                                                backgroundColor: 'red',
+                                                borderRadius: '50%'
+                                            }}
+                                            aria-label={`${unreadCount} непрочитанных уведомлений`}
+                                        ></span>
                                     )}
                                 </button>
                                 {showNotifications && (
                                     <div className="notification-menu">
                                         <div className="notification-header">
                                             <h3>Уведомления</h3>
-                                            <button className="close-btn" onClick={() => setShowNotifications(false)}>×</button>
+                                            <div className="notification-actions">
+                                                {unreadCount > 0 && (
+                                                    <button
+                                                        className="mark-all-read-btn"
+                                                        onClick={markAllAsRead}
+                                                    >
+                                                        Прочитать все
+                                                    </button>
+                                                )}
+                                                <button
+                                                    className="close-btn"
+                                                    onClick={() => setShowNotifications(false)}
+                                                    aria-label="Закрыть уведомления"
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
                                         </div>
                                         <ul className="notification-list">
                                             {notifications.length === 0 ? (
-                                                <li className="notification-item" style={{justifyContent: 'center', color: '#888'}}>
+                                                <li
+                                                    className="notification-item"
+                                                    style={{justifyContent: 'center', color: '#888'}}
+                                                >
                                                     Нет уведомлений
                                                 </li>
                                             ) : (
                                                 notifications.map((not) => (
-                                                    <li key={not.id} className={`notification-item ${not.read ? 'read' : ''}`}>
+                                                    <li
+                                                        key={not.id}
+                                                        className={`notification-item ${not.read ? 'read' : 'unread'}`}
+                                                    >
                                                         <div className="notification-content">
-                                                            <p>{not.text}</p>
+                                                            <p className="notification-text">{not.text}</p>
                                                             <span className="notification-time">{not.time}</span>
                                                         </div>
+                                                        <button
+                                                            className={`read-button ${not.read ? 'read' : 'unread'}`}
+                                                            onClick={() => toggleReadStatus(not.id)}
+                                                            title={not.read ? "Отметить как непрочитанное" : "Отметить как прочитанное"}
+                                                            aria-label={not.read ? "Отметить как непрочитанное" : "Отметить как прочитанное"}
+                                                        >
+                                                            <CheckIcon />
+                                                        </button>
                                                     </li>
                                                 ))
                                             )}
@@ -219,7 +306,11 @@ const Header = () => {
                                 )}
                             </div>
                         )}
-                        <button className="icon-btn" onClick={goToProfileOrLogin}>
+                        <button
+                            className="icon-btn"
+                            onClick={goToProfileOrLogin}
+                            aria-label={user ? "Профиль" : "Войти"}
+                        >
                             <ProfileIcon />
                         </button>
                     </div>
@@ -230,7 +321,11 @@ const Header = () => {
                         <div className="filter-group">
                             <div className="filter-with-label">
                                 <label className="filter-label">Корпус</label>
-                                <select value={filters.corpus || 'Б'} onChange={handleCorpusChange} className="corpus-select">
+                                <select
+                                    value={filters.corpus || 'Б'}
+                                    onChange={handleCorpusChange}
+                                    className="corpus-select"
+                                >
                                     <option value="А">А</option>
                                     <option value="Б">Б</option>
                                     <option value="В">В</option>
@@ -239,7 +334,11 @@ const Header = () => {
 
                             <div className="filter-with-label">
                                 <label className="filter-label">Этаж</label>
-                                <select value={filters.floor || '1'} onChange={handleFloorChange} className="floor-select">
+                                <select
+                                    value={filters.floor || '1'}
+                                    onChange={handleFloorChange}
+                                    className="floor-select"
+                                >
                                     <option value="1">1</option>
                                     <option value="2">2</option>
                                     <option value="3">3</option>
@@ -250,17 +349,19 @@ const Header = () => {
 
                             <div className="filter-with-label">
                                 <label className="filter-label">Тип</label>
-                                <select value={filters.roomType || 'all'} onChange={(e) => updateFilter('roomType', e.target.value)} className="type-select">
+                                <select
+                                    value={filters.roomType || 'all'}
+                                    onChange={(e) => updateFilter('roomType', e.target.value)}
+                                    className="type-select"
+                                >
                                     <option value="all">Все</option>
                                     <option value="lecture">Лекционная</option>
                                     <option value="computer">Компьютерная</option>
-                                    <option value="seminar">Семинарская</option>
-                                    <option value="lab">Лаборатория</option>
-                                    <option value="reading">Читальный зал</option>
+                                    <option value="other">Другое</option>
                                 </select>
                             </div>
 
-                            {/* НОВЫЙ ФИЛЬТР ДАТЫ */}
+                            {/* ФИЛЬТР ДАТЫ */}
                             <div className="filter-with-label">
                                 <label className="filter-label">Дата</label>
                                 <input
@@ -281,7 +382,10 @@ const Header = () => {
                             <div className="filter-with-label time-filter">
                                 <label className="filter-label">Время</label>
                                 <div className="time-select-wrapper">
-                                    <button className="time-range-btn" onClick={handleTimeRangeClick}>
+                                    <button
+                                        className="time-range-btn"
+                                        onClick={handleTimeRangeClick}
+                                    >
                                         {selectedTime || 'Выбрать время'}
                                     </button>
                                     {availableTimes.length > 0 ? (
@@ -301,6 +405,7 @@ const Header = () => {
                                     onChange={handleSeatsChange}
                                     className="seats-input"
                                     maxLength={3}
+                                    inputMode="numeric"
                                 />
                             </div>
 
@@ -313,7 +418,11 @@ const Header = () => {
                                 </div>
                             </div>
 
-                            <button className="icon-btn" onClick={handleRulesClick}>
+                            <button
+                                className="icon-btn"
+                                onClick={handleRulesClick}
+                                aria-label="Правила бронирования"
+                            >
                                 <HelpIcon />
                             </button>
                         </div>

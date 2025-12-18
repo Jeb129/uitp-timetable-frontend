@@ -6,9 +6,8 @@ const FilterContext = createContext();
 export const useFilters = () => {
     const context = useContext(FilterContext);
     if (!context) {
-        // Заглушка на случай ошибок, чтобы не падало
         return {
-            filters: { corpus: 'Б', floor: '1', minCapacity: 0, roomType: 'all', status: 'all' },
+            filters: { corpus: 'Б', floor: '1', minCapacity: 0, roomType: 'all', status: 'all', time: '', date: '' },
             roomStats: { found: 0, total: 0 },
             updateFilter: () => {},
             updateStats: () => {},
@@ -20,13 +19,17 @@ export const useFilters = () => {
 };
 
 export const FilterProvider = ({ children }) => {
+    // Получаем текущую дату для дефолтного значения (опционально)
+    const today = new Date().toISOString().split('T')[0];
+
     const [filters, setFilters] = useState({
         corpus: 'Б',
         floor: '1',
         minCapacity: 0,
         roomType: 'all',
         status: 'all',
-        timeRange: ''
+        time: '', // Исправлено с timeRange на time
+        date: today // Добавлено поле даты по умолчанию
     });
 
     const [roomStats, setRoomStats] = useState({
@@ -43,7 +46,6 @@ export const FilterProvider = ({ children }) => {
 
     const updateStats = useCallback((found, total) => {
         setRoomStats(prev => {
-
             if (prev.found === found && prev.total === total) {
                 return prev;
             }
@@ -51,28 +53,30 @@ export const FilterProvider = ({ children }) => {
         });
     }, []);
 
-
-
     const clearFilters = useCallback(() => {
+        const todayStr = new Date().toISOString().split('T')[0];
         setFilters({
             corpus: 'Б',
             floor: null,
             minCapacity: 0,
             roomType: 'all',
             status: 'all',
-            timeRange: ''
+            time: '', // Исправлено
+            date: todayStr // Сбрасываем на сегодня
         });
     }, []);
 
-    // Значения по умолчанию для быстрого сброса
+    // Значения по умолчанию для кнопки "Сбросить" в MapPage
     const resetToDefaults = useCallback(() => {
+        const todayStr = new Date().toISOString().split('T')[0];
         setFilters({
             corpus: 'Б',
-            floor: 2,
+            floor: '1', // Обычно сбрасывают на 1 этаж
             minCapacity: 0,
             roomType: 'all',
             status: 'all',
-            timeRange: ''
+            time: '', // Исправлено
+            date: todayStr
         });
     }, []);
 

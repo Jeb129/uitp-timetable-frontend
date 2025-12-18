@@ -29,8 +29,9 @@ const MapPage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // Данные всех аудиторий
+    // Данные всех аудиторий и бронирований
     const [allRoomsData, setAllRoomsData] = useState({});
+    const [bookings, setBookings] = useState([]);
 
     const { filters, updateFilter, updateStats } = useFilters();
     const [currentFloor, setCurrentFloor] = useState(Number(filters.floor) || 1);
@@ -53,15 +54,49 @@ const MapPage = () => {
         return match ? parseInt(match[0]) : 1;
     };
 
+    // --- ОБНОВЛЕННАЯ ЛОГИКА ТИПОВ ---
     const getTypeFromData = (equipment, description) => {
-        const text = `${equipment} ${description}`.toLowerCase();
-        if (text.includes('компьютер') || text.includes('пк')) {
+        // Приводим к нижнему регистру для поиска
+        const text = `${equipment || ''} ${description || ''}`.toLowerCase();
+
+        if (text.includes('компьютер') || text.includes('пк') || text.includes('моноблок') || text.includes('ноутбук')) {
             return 'computer';
         }
+
+
+        const otherKeywords = [
+            'лаборатор',
+            'спорт',
+            'читальн',
+            'библиотек',
+            'деканат',
+            'кафедра',
+            'преподавател',
+            'архив',
+            'сервер',
+            'склад',
+            'туалет',
+            'буфет',
+            'гардероб'
+        ];
+
+        if (otherKeywords.some(keyword => text.includes(keyword))) {
+            return 'other';
+        }
+
         return 'lecture';
     };
 
-    // Функция для форматирования даты в Local ISO без Z
+    // Вспомогательная функция для отображения названия типа на русском
+    const getRoomTypeLabel = (type) => {
+        switch (type) {
+            case 'computer': return 'Компьютерный класс';
+            case 'lecture': return 'Лекционная аудитория';
+            case 'other': return 'Другое / Служебное';
+            default: return 'Аудитория';
+        }
+    };
+
     const toLocalISO = (date) => {
         const pad = (n) => String(n).padStart(2, '0');
         const year = date.getFullYear();
@@ -79,14 +114,16 @@ const MapPage = () => {
         }
     }, [filters.floor]);
 
-    // Загрузка списка всех аудиторий
+    // 1. Загрузка списка всех аудиторий
     useEffect(() => {
         const fetchAllRooms = async () => {
             try {
                 const response = await publicApi.post('/database/get/Classroom', {});
                 const roomsObj = {};
-                if (Array.isArray(response.data)) {
-                    response.data.forEach(room => {
+                const data = Array.isArray(response.data) ? response.data : (response.data?.results || []);
+
+                if (Array.isArray(data)) {
+                    data.forEach(room => {
                         const svgId = getSvgIdFromDbNumber(room.number);
                         if (svgId) {
                             const floor = getFloorFromNumber(svgId);
@@ -110,24 +147,78 @@ const MapPage = () => {
         fetchAllRooms();
     }, []);
 
-    // Фильтрация
-    const checkRoomFilters = (roomData, currentFilters) => {
+    // 2. Загрузка бронирований
+    useEffect(() => {
+        const fetchBookings = async () => {
+            try {
+                const response = await privateApi.post('/database/get/Booking', {});
+                const data = Array.isArray(response.data) ? response.data : (response.data?.results || []);
+                setBookings(data);
+            } catch (err) {
+                console.error("Ошибка загрузки бронирований:", err);
+            }
+        };
+        fetchBookings();
+    }, []);
+
+    const getFilterDateRange = (dateStr, timeRangeStr) => {
+        if (!dateStr || !timeRangeStr) return null;
+        try {
+            const [startStr, endStr] = timeRangeStr.split(' - ');
+            const [startH, startM] = startStr.split(':').map(Number);
+            const [endH, endM] = endStr.split(':').map(Number);
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const filterStart = new Date(year, month - 1, day, startH, startM, 0);
+            const filterEnd = new Date(year, month - 1, day, endH, endM, 0);
+            return { start: filterStart, end: filterEnd };
+        } catch (e) {
+            console.error("Ошибка парсинга даты/времени фильтра", e);
+            return null;
+        }
+    };
+
+    const checkRoomFilters = (roomData, currentFilters, activeBookings) => {
         if (!roomData) return false;
+
+        // Фильтр по этажу
         if (currentFilters.floor && String(currentFilters.floor) !== '' && String(roomData.floor) !== String(currentFilters.floor)) return false;
+
+        // Фильтр по вместимости
         const filterCap = parseInt(currentFilters.minCapacity, 10);
         const roomCap = parseInt(roomData.capacity, 10);
         if (!isNaN(filterCap) && filterCap > 0 && roomCap < filterCap) return false;
-        if (currentFilters.roomType && currentFilters.roomType !== 'all' && roomData.type !== currentFilters.roomType) return false;
+
+        // Фильтр по типу (Обновлен)
+        if (currentFilters.roomType && currentFilters.roomType !== 'all') {
+            if (roomData.type !== currentFilters.roomType) return false;
+        }
+
+        // Фильтр по времени (Занятость)
+        if (currentFilters.time && currentFilters.date) {
+            const range = getFilterDateRange(currentFilters.date, currentFilters.time);
+            if (range) {
+                const isOccupied = activeBookings.some(booking => {
+                    if (booking.classroom_id !== roomData.dbId) return false;
+                    if (booking.status === false) return false;
+                    const bookingStart = new Date(booking.date_start);
+                    const bookingEnd = new Date(booking.date_end);
+                    return (bookingStart < range.end) && (bookingEnd > range.start);
+                });
+                if (isOccupied) return false;
+            }
+        }
         return true;
     };
 
     const getFilteredRooms = useMemo(() => {
         const filteredIds = [];
         Object.keys(allRoomsData).forEach(svgId => {
-            if (checkRoomFilters(allRoomsData[svgId], filters)) filteredIds.push(svgId);
+            if (checkRoomFilters(allRoomsData[svgId], filters, bookings)) {
+                filteredIds.push(svgId);
+            }
         });
         return filteredIds;
-    }, [filters, allRoomsData]);
+    }, [filters, allRoomsData, bookings]);
 
     useEffect(() => {
         const roomsArray = Object.values(allRoomsData);
@@ -168,13 +259,15 @@ const MapPage = () => {
                     equipmentList = ['Базовое оборудование'];
                 }
 
-                const roomType = getTypeFromData(room.equipment, room.description);
+                // Определяем тип с помощью новой функции
+                const typeCode = getTypeFromData(room.equipment, room.description);
+                const typeLabel = getRoomTypeLabel(typeCode);
 
                 setRoomInfo({
                     id: room.id,
                     name: room.number,
                     svgId: svgId,
-                    type: roomType === 'computer' ? 'Компьютерный класс' : 'Лекционная',
+                    type: typeLabel, // Используем красивое название
                     capacity: room.capacity || 0,
                     equipment: equipmentList,
                     status: 'свободна',
@@ -233,10 +326,9 @@ const MapPage = () => {
             return;
         }
 
-        // Получаем дату из фильтра (Header), если её нет - берем текущую
         const selectedDateStr = filters.date || new Date().toISOString().split('T')[0];
-
         const timeData = parseTimeRange(filters.time);
+
         if (!timeData || timeData.duration <= 0) {
             alert("Некорректный временной интервал.");
             return;
@@ -244,18 +336,13 @@ const MapPage = () => {
 
         setLoading(true);
         try {
-            // 1. Рассчитываем дату начала на основе выбранной даты из фильтра
             const [year, month, day] = selectedDateStr.split('-').map(Number);
             const startDate = new Date(year, month - 1, day, timeData.startH, timeData.startM, 0, 0);
-
-            // 2. Рассчитываем дату окончания
             const endDate = new Date(startDate.getTime() + timeData.duration * 60000);
 
-            // 3. Формируем Local ISO строки
             const dateStartISO = toLocalISO(startDate);
             const dateEndISO = toLocalISO(endDate);
 
-            // 4. Формируем payload под модель Booking
             const payload = {
                 classroom_id: roomInfo.id,
                 date_start: dateStartISO,
@@ -264,12 +351,15 @@ const MapPage = () => {
                 description: bookingPurpose
             };
 
-            console.log("Отправка бронирования:", payload);
-
             await privateApi.post('/booking/create', payload);
 
             const displayDate = startDate.toLocaleDateString();
             alert(`Заявка успешно создана!\nАудитория: ${roomInfo.name}\nДата: ${displayDate}\nВремя: ${filters.time}`);
+
+            const response = await privateApi.post('/database/get/Booking', {});
+            const data = Array.isArray(response.data) ? response.data : (response.data?.results || []);
+            setBookings(data);
+
             handleCloseModal();
 
         } catch (err) {
@@ -299,7 +389,7 @@ const MapPage = () => {
         updateFilter('roomType', 'all');
         updateFilter('status', 'all');
         updateFilter('time', '');
-        updateFilter('date', new Date().toISOString().split('T')[0]); // Сброс даты на сегодня
+        updateFilter('date', new Date().toISOString().split('T')[0]);
         setCurrentFloor(1);
     };
 
@@ -338,7 +428,7 @@ const MapPage = () => {
                     <div className="stats-badge">
                         <span className="stats-text">Показано: <strong>{getFilteredRooms.length}</strong></span>
                     </div>
-                    {(filters.floor || filters.minCapacity > 0 || filters.roomType !== 'all' || filters.status !== 'all') && (
+                    {(filters.floor || filters.minCapacity > 0 || filters.roomType !== 'all' || filters.status !== 'all' || filters.time) && (
                         <button className="reset-filters-btn" onClick={handleResetFilters}>Сбросить</button>
                     )}
                 </div>
