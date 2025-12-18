@@ -61,6 +61,18 @@ const MapPage = () => {
         return 'lecture';
     };
 
+    // Функция для форматирования даты в Local ISO без Z
+    const toLocalISO = (date) => {
+        const pad = (n) => String(n).padStart(2, '0');
+        const year = date.getFullYear();
+        const month = pad(date.getMonth() + 1);
+        const day = pad(date.getDate());
+        const hours = pad(date.getHours());
+        const minutes = pad(date.getMinutes());
+        const seconds = '00';
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+    };
+
     useEffect(() => {
         if (filters.floor && filters.floor !== '') {
             setCurrentFloor(Number(filters.floor));
@@ -135,7 +147,6 @@ const MapPage = () => {
         setError(null);
         try {
             const dbNumberSearch = `Б-${svgId}`;
-
             const response = await publicApi.post('/database/get/Classroom', {
                 number: dbNumberSearch
             });
@@ -192,19 +203,14 @@ const MapPage = () => {
         fetchRoomInfo(svgId);
     };
 
-    // --- ПАРСИНГ ВРЕМЕНИ (ОБНОВЛЕНО) ---
     const parseTimeRange = (timeRangeStr) => {
         if (!timeRangeStr) return null;
         try {
             const [startStr, endStr] = timeRangeStr.split(' - ');
             const [startH, startM] = startStr.split(':').map(Number);
             const [endH, endM] = endStr.split(':').map(Number);
-
-            // Считаем длительность для отправки на бэк (она там требуется в required_fields)
             const duration = (endH * 60 + endM) - (startH * 60 + startM);
-
-            // Возвращаем все компоненты
-            return { startH, startM, endH, endM, duration };
+            return { startH, startM, duration };
         } catch (e) {
             console.error("Ошибка парсинга времени", e);
             return null;
@@ -227,6 +233,9 @@ const MapPage = () => {
             return;
         }
 
+        // Получаем дату из фильтра (Header), если её нет - берем текущую
+        const selectedDateStr = filters.date || new Date().toISOString().split('T')[0];
+
         const timeData = parseTimeRange(filters.time);
         if (!timeData || timeData.duration <= 0) {
             alert("Некорректный временной интервал.");
@@ -235,46 +244,22 @@ const MapPage = () => {
 
         setLoading(true);
         try {
-            // 1. Устанавливаем дату и время НАЧАЛА
-            const startDate = new Date();
-            startDate.setHours(timeData.startH, timeData.startM, 0, 0);
+            // 1. Рассчитываем дату начала на основе выбранной даты из фильтра
+            const [year, month, day] = selectedDateStr.split('-').map(Number);
+            const startDate = new Date(year, month - 1, day, timeData.startH, timeData.startM, 0, 0);
 
-            // Если время уже прошло сегодня, переносим на завтра
-            if (startDate < new Date()) {
-                startDate.setDate(startDate.getDate() + 1);
-            }
-
-            // 2. Устанавливаем дату и время ОКОНЧАНИЯ
-            // Клонируем startDate, чтобы сохранить тот же день (год/месяц/число)
-            const endDate = new Date(startDate);
-            endDate.setHours(timeData.endH, timeData.endM, 0, 0);
-
-            // На случай, если интервал переходит через полночь (например 23:00 - 01:00),
-            // хотя для аудиторий это редкость, но для надежности:
-            if (endDate <= startDate) {
-                endDate.setDate(endDate.getDate() + 1);
-            }
+            // 2. Рассчитываем дату окончания
+            const endDate = new Date(startDate.getTime() + timeData.duration * 60000);
 
             // 3. Формируем Local ISO строки
-            const toLocalISO = (date) => {
-                const pad = (n) => String(n).padStart(2, '0');
-                const year = date.getFullYear();
-                const month = pad(date.getMonth() + 1);
-                const day = pad(date.getDate());
-                const hours = pad(date.getHours());
-                const minutes = pad(date.getMinutes());
-                const seconds = '00';
-                return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-            };
-
             const dateStartISO = toLocalISO(startDate);
             const dateEndISO = toLocalISO(endDate);
 
+            // 4. Формируем payload под модель Booking
             const payload = {
                 classroom_id: roomInfo.id,
                 date_start: dateStartISO,
                 date_end: dateEndISO,
-                duration: timeData.duration,
                 user_id: user.id,
                 description: bookingPurpose
             };
@@ -284,7 +269,7 @@ const MapPage = () => {
             await privateApi.post('/booking/create', payload);
 
             const displayDate = startDate.toLocaleDateString();
-            alert(`Заявка успешно создана!\nАудитория: ${roomInfo.name}\nЦель: ${bookingPurpose}\nДата: ${displayDate}\nВремя: ${filters.time}`);
+            alert(`Заявка успешно создана!\nАудитория: ${roomInfo.name}\nДата: ${displayDate}\nВремя: ${filters.time}`);
             handleCloseModal();
 
         } catch (err) {
@@ -314,6 +299,7 @@ const MapPage = () => {
         updateFilter('roomType', 'all');
         updateFilter('status', 'all');
         updateFilter('time', '');
+        updateFilter('date', new Date().toISOString().split('T')[0]); // Сброс даты на сегодня
         setCurrentFloor(1);
     };
 
