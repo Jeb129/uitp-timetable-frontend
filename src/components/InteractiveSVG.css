@@ -5,15 +5,9 @@
 }
 
 .interactive-svg-container svg {
-    width: 130%;
+    width: 120%;
     height: auto;
     display: block;
-}
-
-.svgrect {
-    transform: scale(1.25);
-    transform: translate(50%, 50%);
-    transform-origin: center;
 }
 
 .svg-loading {
