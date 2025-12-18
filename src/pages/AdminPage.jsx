@@ -17,7 +17,7 @@ const AdminPage = () => {
     const [users, setUsers] = useState([]);
     const [bookings, setBookings] = useState([]);
 
-    // Статистика для карточек
+    // Статистика
     const [statistics, setStatistics] = useState({
         totalUsers: 0, activeUsers: 0, pendingUsers: 0, blockedUsers: 0,
         totalBookings: 0, pendingModeration: 0, approvedBookings: 0, rejectedBookings: 0,
@@ -25,20 +25,19 @@ const AdminPage = () => {
         roomsAvailable: 0, occupiedRooms: 0, popularRoom: '-'
     });
 
-    // Хардкодные данные для графиков (визуализация)
+    // Хардкодные данные для графиков (оставляем для красоты, пока не реализуете сбор данных для графиков)
     const mockChartData = {
-        users: users, // Передаем реальных пользователей для графиков, если компонент поддерживает
-        bookings: bookings, // Передаем реальные бронирования
-        // Заглушки для специфичных графиков, если данных мало
+        users: users,
+        bookings: bookings,
         revenueData: [
             { name: 'Янв', value: 4000 }, { name: 'Фев', value: 3000 },
             { name: 'Мар', value: 2000 }, { name: 'Апр', value: 2780 },
             { name: 'Май', value: 1890 }, { name: 'Июн', value: 2390 },
         ],
         statusDistribution: [
-            { name: 'Подтверждено', value: bookings.filter(b => b.status === 'approved').length },
-            { name: 'Отклонено', value: bookings.filter(b => b.status === 'rejected').length },
-            { name: 'На проверке', value: bookings.filter(b => b.status === 'pending').length },
+            { name: 'Подтверждено', value: bookings.filter(b => b.status === true).length },
+            { name: 'Отклонено', value: bookings.filter(b => b.status === false).length },
+            { name: 'На проверке', value: bookings.filter(b => b.status === null).length },
         ]
     };
 
@@ -73,69 +72,97 @@ const AdminPage = () => {
         }
     };
 
-    // --- 1. ЛОГИКА СТАТИСТИКИ ---
+    // --- ИСПРАВЛЕННАЯ ЛОГИКА СТАТИСТИКИ (СЧИТАЕМ НА ФРОНТЕ) ---
     const fetchStatistics = async () => {
         try {
-            // Выполняем запросы параллельно
-            const [usersRes, bookingsRes, classroomsRes, statsRes] = await Promise.all([
+            // 1. Получаем все необходимые данные параллельно
+            const [usersRes, bookingsRes, classroomsRes] = await Promise.all([
                 privateApi.post('/database/get/User', {}),
                 privateApi.post('/database/get/Booking', {}),
-                privateApi.post('/database/get/Classroom', {}),
-                privateApi.get('/classroom/statistics')
+                privateApi.post('/database/get/Classroom', {})
             ]);
 
-            const normalizeData = (data) => {
+            // 2. Безопасно извлекаем массивы (даже если API вернет один объект или null)
+            const ensureArray = (data) => {
                 if (!data) return [];
                 return Array.isArray(data) ? data : [data];
             };
 
-            const usersData = normalizeData(usersRes.data);
-            const bookingsData = normalizeData(bookingsRes.data);
-            const classroomsData = normalizeData(classroomsRes.data);
+            const usersData = ensureArray(usersRes.data);
+            const bookingsData = ensureArray(bookingsRes.data);
+            const classroomsData = ensureArray(classroomsRes.data);
 
-            // --- Подсчет пользователей ---
+            // 3. --- СЧИТАЕМ СТАТИСТИКУ ПОЛЬЗОВАТЕЛЕЙ ---
             const totalUsers = usersData.length;
             const activeUsers = usersData.filter(u => u.confirmed === true).length;
             const pendingUsers = usersData.filter(u => u.confirmed === false).length;
-            const blockedUsers = 0; // Нет поля blocked в модели
+            const blockedUsers = 0; // Нет поля
 
-            // --- Подсчет бронирований ---
-            const totalBookings = bookingsData.length;
-            // Модерация (status: null)
-            const pendingModeration = bookingsData.filter(b => b.status === null).length;
-            // Одобрено (status: true)
-            const approvedBookings = bookingsData.filter(b => b.status === true).length;
-            // Отклонено (status: false)
-            const rejectedBookings = bookingsData.filter(b => b.status === false).length;
+            // 4. --- СЧИТАЕМ СТАТИСТИКУ БРОНИРОВАНИЙ И ФИНАНСОВ ---
+            let totalRevenue = 0;
+            let pendingModeration = 0;
+            let approvedBookings = 0;
+            let rejectedBookings = 0;
+            const roomUsageCount = {}; // { classroom_id: count }
 
-            // --- Финансы и Аудитории (из statsRes) ---
-            const apiStats = statsRes.data.success ? statsRes.data.statistics : {};
-            const totalRevenue = apiStats.total_revenue_all || 0;
-            const popularRoom = (apiStats.top_profitable_classrooms && apiStats.top_profitable_classrooms.length > 0)
-                ? apiStats.top_profitable_classrooms[0].classroom_number
-                : '-';
+            bookingsData.forEach(booking => {
+                // Статусы
+                if (booking.status === null) pendingModeration++;
+                else if (booking.status === true) {
+                    approvedBookings++;
+                    // Считаем выручку только по подтвержденным броням
+                    // В json приходит total_cost как число или строка
+                    totalRevenue += Number(booking.total_cost || 0);
 
-            // Обновляем стейт
+                    // Считаем популярность аудитории
+                    const roomId = booking.classroom_id;
+                    roomUsageCount[roomId] = (roomUsageCount[roomId] || 0) + 1;
+                }
+                else if (booking.status === false) rejectedBookings++;
+            });
+
+            // 5. --- НАХОДИМ ПОПУЛЯРНУЮ АУДИТОРИЮ ---
+            let popularRoomId = null;
+            let maxCount = 0;
+            for (const [roomId, count] of Object.entries(roomUsageCount)) {
+                if (count > maxCount) {
+                    maxCount = count;
+                    popularRoomId = roomId;
+                }
+            }
+
+            // Находим название аудитории по ID
+            let popularRoomName = '-';
+            if (popularRoomId) {
+                const room = classroomsData.find(r => String(r.id) === String(popularRoomId));
+                popularRoomName = room ? room.number : `ID: ${popularRoomId}`;
+            }
+
+            // 6. Обновляем стейт
             setStatistics({
                 totalUsers,
                 activeUsers,
                 pendingUsers,
                 blockedUsers,
 
-                totalBookings,
+                totalBookings: bookingsData.length,
                 pendingModeration,
                 approvedBookings,
                 rejectedBookings,
-                totalRevenue,
 
+                totalRevenue: totalRevenue, // Теперь считается корректно
                 roomsAvailable: classroomsData.length,
                 occupiedRooms: 0,
-                popularRoom
+                popularRoom: popularRoomName
             });
 
+            // Сохраняем данные для графиков
+            setUsers(usersData);
+            setBookings(bookingsData);
+
         } catch (err) {
-            console.error("Ошибка загрузки статистики:", err);
-            // Не блокируем UI ошибкой, так как это сводная информация
+            console.error("Ошибка при расчете статистики:", err);
+            setError("Не удалось загрузить статистику");
         }
     };
 
@@ -163,6 +190,8 @@ const AdminPage = () => {
             setUsers(prev => prev.map(user =>
                 user.id === userId ? { ...user, confirmed: newConfirmedStatus } : user
             ));
+            // Если мы на вкладке статистики, можно перезапросить статы
+            if (activeTab === 'stats') fetchStatistics();
         } catch (err) {
             console.error(err);
             setError(`Ошибка при изменении статуса: ${err.message}`);
@@ -174,11 +203,9 @@ const AdminPage = () => {
     // --- API: БРОНИРОВАНИЯ ---
     const fetchBookings = async () => {
         try {
-            // 1. Бронирования
             const bookingsRes = await privateApi.post('/database/get/Booking', {});
             const rawBookings = Array.isArray(bookingsRes.data) ? bookingsRes.data : (bookingsRes.data ? [bookingsRes.data] : []);
 
-            // 2. Справочники
             const [usersRes, roomsRes] = await Promise.all([
                 privateApi.post('/database/get/User', {}),
                 privateApi.post('/database/get/Classroom', {})
@@ -241,6 +268,9 @@ const AdminPage = () => {
                 b.id === bookingId ? { ...b, status: statusStr, rawStatus: isApprove } : b
             ));
 
+            // Если мы в статистике - обновляем цифры
+            if (activeTab === 'stats') fetchStatistics();
+
         } catch (err) {
             console.error(err);
             setError(`Ошибка при изменении статуса: ${err.message}`);
@@ -249,7 +279,7 @@ const AdminPage = () => {
         }
     };
 
-    // --- UI ---
+    // --- UI HELPERS ---
     const handleViewBooking = (booking) => {
         setSelectedBooking(booking);
         setShowBookingModal(true);
@@ -361,8 +391,8 @@ const AdminPage = () => {
 
                             <AdminCharts
                                 statistics={mockChartData}
-                                bookings={mockChartData.bookings}
-                                users={mockChartData.users}
+                                bookings={bookings}
+                                users={users}
                                 revenueData={mockChartData.revenueData}
                             />
                         </div>

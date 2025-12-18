@@ -15,35 +15,37 @@ const ProfilePage = () => {
 
     // --- Стейты Данных ---
     const [userInfo, setUserInfo] = useState({
-        login: "user",
         email: "",
-        role: "Пользователь",
-        fullName: "",
-        phone: "",
-        department: "Не указано"
+        role: "Внешний пользователь",
+        isConfirmed: false
     });
 
     const [bookings, setBookings] = useState([]);
     const [loadingBookings, setLoadingBookings] = useState(false);
 
-    // --- Стейты Редактирования ---
-    const [isEditing, setIsEditing] = useState(false);
-    const [editForm, setEditForm] = useState({ fullName: '', phone: '' });
-    const [saveError, setSaveError] = useState('');
-    const [isSaving, setIsSaving] = useState(false);
+    // Хелпер для отображения названия роли
+    const getRoleName = (role) => {
+        switch (role) {
+            case 'admin': return 'Администратор';
+            case 'kgu': return 'Пользователь КГУ';
+            case 'user': return 'Внешний пользователь';
+            default: return role || 'Гость';
+        }
+    };
 
     // --- Инициализация данных пользователя ---
     useEffect(() => {
         const fetchUserData = async () => {
             if (user) {
-                setUserInfo(prev => ({
-                    ...prev,
-                    login: user.email ? user.email.split('@')[0] : "user",
+                // 1. Устанавливаем данные из контекста/токена
+                setUserInfo({
                     email: user.email || "",
-                    role: user.role === 'admin' ? "Администратор" : "Пользователь",
-                }));
+                    role: getRoleName(user.role),
+                    isConfirmed: false // По умолчанию, пока не загрузим с бэка
+                });
 
                 try {
+                    // 2. Запрашиваем актуальный статус из БД
                     const response = await privateApi.post('/database/get/User', {
                         id: user.id
                     });
@@ -51,12 +53,11 @@ const ProfilePage = () => {
                     const userData = Array.isArray(response.data) ? response.data[0] : response.data;
 
                     if (userData) {
-                        setUserInfo(prev => ({
-                            ...prev,
-                            fullName: userData.full_name || prev.fullName || "Иванов Иван Иванович",
-                            phone: userData.phone || prev.phone || "+7 (999) 000-00-00",
+                        setUserInfo({
+                            email: userData.email,
+                            role: getRoleName(userData.role),
                             isConfirmed: userData.confirmed || false
-                        }));
+                        });
                     }
                 } catch (error) {
                     console.error("Ошибка получения данных пользователя:", error);
@@ -81,9 +82,7 @@ const ProfilePage = () => {
         if (bk.status === true) statusStr = 'confirmed';
         if (bk.status === false) statusStr = 'rejected';
 
-        // ИСПОЛЬЗУЕМ ПОДГРУЖЕННЫЙ НОМЕР АУДИТОРИИ
-        // Если classroom_number был успешно найден, выводим его (например "Аудитория Б-101")
-        // Если нет — выводим ID как запасной вариант.
+        // Формируем название комнаты
         const roomName = bk.classroom_number
             ? `Аудитория ${bk.classroom_number}`
             : `Аудитория (ID: ${bk.classroom_id})`;
@@ -94,7 +93,7 @@ const ProfilePage = () => {
             date: dateStr,
             time: `${startTimeStr} - ${endTimeStr}`,
             status: statusStr,
-            equipment: [] // Оборудование можно подгружать аналогично, если нужно
+            equipment: []
         };
     };
 
@@ -109,40 +108,30 @@ const ProfilePage = () => {
                         user_id: user.id
                     });
 
-                    // Нормализуем ответ в массив
                     const bookingsData = Array.isArray(response.data) ? response.data : [response.data];
 
-                    // 2. Для каждого бронирования делаем запрос к таблице Classroom, чтобы узнать номер
-                    // Используем Promise.all для параллельного выполнения запросов
+                    // 2. Подгружаем номера аудиторий
                     const enrichedBookings = await Promise.all(bookingsData.map(async (booking) => {
                         try {
-                            // Запрашиваем Classroom по id
                             const roomResponse = await privateApi.post('/database/get/Classroom', {
                                 id: booking.classroom_id
                             });
 
-                            // Получаем объект аудитории
                             const roomData = Array.isArray(roomResponse.data)
                                 ? roomResponse.data[0]
                                 : roomResponse.data;
 
-                            // Возвращаем объект бронирования + поле classroom_number
                             return {
                                 ...booking,
-                                classroom_number: roomData ? roomData.number : null // Берем поле 'number' из модели
+                                classroom_number: roomData ? roomData.number : null
                             };
                         } catch (err) {
-                            console.error(`Не удалось получить данные для аудитории ID ${booking.classroom_id}`, err);
-                            // Если ошибка (например аудитория удалена), возвращаем бронь без номера
                             return booking;
                         }
                     }));
 
-                    // 3. Преобразуем данные для отображения
                     const mappedData = enrichedBookings.map(mapBackendBookingToFrontend);
-
-                    // Сортируем: новые сверху
-                    mappedData.sort((a, b) => b.id - a.id);
+                    mappedData.sort((a, b) => b.id - a.id); // Новые сверху
 
                     setBookings(mappedData);
                 } catch (error) {
@@ -158,63 +147,6 @@ const ProfilePage = () => {
         }
     }, [user, activeTab]);
 
-
-    // --- Остальной код страницы (Редактирование, Logout и т.д.) без изменений ---
-    const handleEditClick = () => {
-        setEditForm({ fullName: userInfo.fullName, phone: userInfo.phone });
-        setIsEditing(true);
-        setSaveError('');
-    };
-
-    const handleCancelClick = () => {
-        setIsEditing(false);
-        setSaveError('');
-    };
-
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setEditForm(prev => ({ ...prev, [name]: value }));
-    };
-
-    const validateForm = () => {
-        if (!editForm.fullName.trim()) return "ФИО не может быть пустым";
-        return null;
-    };
-
-    const handleSaveClick = async () => {
-        const error = validateForm();
-        if (error) {
-            setSaveError(error);
-            return;
-        }
-        setIsSaving(true);
-        setSaveError('');
-
-        try {
-            await privateApi.post('/database/update/User', {
-                id: user.id,
-                full_name: editForm.fullName,
-                phone: editForm.phone
-            });
-
-            setUserInfo(prev => ({
-                ...prev,
-                fullName: editForm.fullName,
-                phone: editForm.phone
-            }));
-            setIsEditing(false);
-        } catch (err) {
-            console.error("Ошибка сохранения:", err);
-            if (err.response && err.response.data && err.response.data.error) {
-                setSaveError(err.response.data.error);
-            } else {
-                setSaveError("Не удалось сохранить изменения.");
-            }
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
     const handleLogout = () => {
         logout();
         navigate('/login');
@@ -224,40 +156,39 @@ const ProfilePage = () => {
     const translateStatus = (s) => (s==='pending'?'На модерации':s==='confirmed'?'Подтверждено':s==='rejected'?'Отклонено':s);
     const toggleViewMode = () => setViewMode(viewMode === 'cards' ? 'table' : 'cards');
 
-    if (!user) {
-        return (
-            <div className="profile-page">
-                <div style={{color: "black", textAlign: 'center', marginTop: '50px'}}>
-                    <h2>Доступ запрещен</h2>
-                    <p>Пожалуйста, войдите в систему.</p>
-                    <button className="login-button" onClick={() => navigate('/login')} style={{marginTop: '20px'}}>
-                        Войти
-                    </button>
-                </div>
-            </div>
-        );
-    }
+    // Если пользователь не авторизован
+    // if (!user) {
+    //     return (
+    //         <div className="profile-page">
+    //             <div style={{color: "black", textAlign: 'center', marginTop: '50px'}}>
+    //                 <h2>Доступ запрещен</h2>
+    //                 <p>Пожалуйста, войдите в систему.</p>
+    //                 <button className="login-button" onClick={() => navigate('/login')} style={{marginTop: '20px'}}>
+    //                     Войти
+    //                 </button>
+    //             </div>
+    //         </div>
+    //     );
+    // }
 
     return (
         <div className="profile-page">
             <div className="profile-container">
                 <div className="profile-header">
                     <h2>Профиль пользователя</h2>
-                    <p>Добро пожаловать, {userInfo.email}!</p>
+                    <p>Добро пожаловать!</p>
                 </div>
 
                 <div className="profile-tabs">
                     <button
                         className={`tab-button ${activeTab === 'info' ? 'active' : ''}`}
                         onClick={() => setActiveTab('info')}
-                        disabled={isEditing}
                     >
                         Информация
                     </button>
                     <button
                         className={`tab-button ${activeTab === 'bookings' ? 'active' : ''}`}
                         onClick={() => setActiveTab('bookings')}
-                        disabled={isEditing}
                     >
                         Бронирования
                     </button>
@@ -267,52 +198,43 @@ const ProfilePage = () => {
                     {activeTab === 'info' && (
                         <div className="info-tab">
                             <div className="user-info-card">
-                                <h3>Личная информация</h3>
-                                {saveError && <div className="error-message" style={{color: 'red', marginBottom: '15px'}}>{saveError}</div>}
+                                <h3>Учетная запись</h3>
                                 <div className="info-grid">
                                     <div className="info-item">
                                         <label>Email:</label>
                                         <span>{userInfo.email}</span>
                                     </div>
-                                    <div className="info-item">
-                                        <label>ФИО:</label>
-                                        {isEditing ? (
-                                            <input type="text" name="fullName" className="profile-input" value={editForm.fullName} onChange={handleInputChange} placeholder="Фамилия Имя Отчество" />
-                                        ) : (
-                                            <span>{userInfo.fullName}</span>
-                                        )}
-                                    </div>
+
                                     <div className="info-item">
                                         <label>Роль:</label>
                                         <span>{userInfo.role}</span>
                                     </div>
+
                                     <div className="info-item">
-                                        <label>Телефон:</label>
-                                        {isEditing ? (
-                                            <input type="tel" name="phone" className="profile-input" value={editForm.phone} onChange={handleInputChange} placeholder="+7 (999) 000-00-00" />
-                                        ) : (
-                                            <span>{userInfo.phone}</span>
-                                        )}
-                                    </div>
-                                    <div className="info-item">
-                                        <label>Отдел/Факультет:</label>
-                                        <span>{userInfo.department}</span>
+                                        <label>Статус аккаунта:</label>
+                                        <span className={userInfo.isConfirmed ? "status-confirmed-text" : "status-pending-text"}>
+                                            {userInfo.isConfirmed ? "Подтвержден (СДО)" : "Не подтвержден"}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
+
                             <div className="profile-actions" style={{display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
-                                {!isEditing ? (
-                                    <>
-                                        <button className="edit-button" onClick={handleEditClick}>Редактировать профиль</button>
-                                        <button className="edit-button" style={{backgroundColor: '#28a745'}} onClick={() => navigate('/kgu-confirm')}>Подтвердить аккаунт КГУ</button>
-                                        <button onClick={handleLogout} className="logout-button">Выйти</button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <button className="edit-button" style={{backgroundColor: '#007bff'}} onClick={handleSaveClick} disabled={isSaving}>{isSaving ? 'Сохранение...' : 'Сохранить изменения'}</button>
-                                        <button className="logout-button" style={{backgroundColor: '#6c757d'}} onClick={handleCancelClick} disabled={isSaving}>Отмена</button>
-                                    </>
+                                {/* Кнопку подтверждения показываем, только если аккаунт еще не подтвержден и это не админ */}
+                                {/* Используем user?.role с безопасным доступом */}
+                                {!userInfo.isConfirmed && user?.role !== 'admin' && (
+                                    <button
+                                        className="edit-button"
+                                        style={{backgroundColor: '#28a745'}}
+                                        onClick={() => navigate('/kgu-confirm')}
+                                    >
+                                        Подтвердить аккаунт КГУ
+                                    </button>
                                 )}
+
+                                <button onClick={handleLogout} className="logout-button">
+                                    Выйти
+                                </button>
                             </div>
                         </div>
                     )}
@@ -331,7 +253,12 @@ const ProfilePage = () => {
                             ) : bookings.length === 0 ? (
                                 <div className="no-bookings">
                                     <p>У вас пока нет активных бронирований</p>
-                                    <button className="book-room-button" onClick={() => navigate('/map')}>Перейти к бронированию</button>
+                                    <button
+                                        className="book-room-button"
+                                        onClick={() => navigate('/map')}
+                                    >
+                                        Перейти к бронированию
+                                    </button>
                                 </div>
                             ) : viewMode === 'cards' ? (
                                 <div className="bookings-list">
@@ -339,7 +266,9 @@ const ProfilePage = () => {
                                         <div key={booking.id} className="booking-card">
                                             <div className="booking-header">
                                                 <h4>{booking.room}</h4>
-                                                <span className={`status-badge ${getStatusColor(booking.status)}`}>{translateStatus(booking.status)}</span>
+                                                <span className={`status-badge ${getStatusColor(booking.status)}`}>
+                                                    {translateStatus(booking.status)}
+                                                </span>
                                             </div>
                                             <div className="booking-details">
                                                 <div className="booking-info">
@@ -349,7 +278,9 @@ const ProfilePage = () => {
                                             </div>
                                             <div className="booking-actions">
                                                 <button className="action-button view">Подробнее</button>
-                                                {booking.status === 'pending' && <button className="action-button cancel">Отменить</button>}
+                                                {booking.status === 'pending' && (
+                                                    <button className="action-button cancel">Отменить</button>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
@@ -359,7 +290,12 @@ const ProfilePage = () => {
                                     <table className="bookings-table">
                                         <thead>
                                         <tr>
-                                            <th>Номер</th><th>Аудитория</th><th>Дата</th><th>Время</th><th>Статус</th><th>Действия</th>
+                                            <th>Номер</th>
+                                            <th>Аудитория</th>
+                                            <th>Дата</th>
+                                            <th>Время</th>
+                                            <th>Статус</th>
+                                            <th>Действия</th>
                                         </tr>
                                         </thead>
                                         <tbody>
@@ -369,11 +305,17 @@ const ProfilePage = () => {
                                                 <td className="booking-room">{booking.room}</td>
                                                 <td className="booking-date">{booking.date}</td>
                                                 <td className="booking-time">{booking.time}</td>
-                                                <td><span className={`status-badge ${getStatusColor(booking.status)}`}>{translateStatus(booking.status)}</span></td>
+                                                <td>
+                                                    <span className={`status-badge ${getStatusColor(booking.status)}`}>
+                                                        {translateStatus(booking.status)}
+                                                    </span>
+                                                </td>
                                                 <td>
                                                     <div className="table-actions">
                                                         <button className="action-button view">Инфо</button>
-                                                        {booking.status === 'pending' && <button className="action-button cancel">Отмена</button>}
+                                                        {booking.status === 'pending' && (
+                                                            <button className="action-button cancel">Отмена</button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
