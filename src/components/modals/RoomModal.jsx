@@ -9,6 +9,8 @@ const RoomModal = ({ roomInfo, isOpen, onClose, onBook, loading, error }) => {
     const [showPanorama, setShowPanorama] = useState(false);
     const [showTimePicker, setShowTimePicker] = useState(false);
 
+    const [bookingPurpose, setBookingPurpose] = useState('');
+
     // Подключаемся к глобальному фильтру
     const { filters, updateFilter } = useFilters();
 
@@ -22,19 +24,28 @@ const RoomModal = ({ roomInfo, isOpen, onClose, onBook, loading, error }) => {
         setShowPanorama(false);
     };
 
-    // При выборе времени обновляем глобальный контекст
     const handleTimeSelect = (timeRange) => {
         updateFilter('time', timeRange);
         setShowTimePicker(false);
     };
 
+    const handleBookClick = () => {
+        onBook(bookingPurpose);
+    };
+
     const hasPanorama = roomInfo && roomInfo.panorama;
 
-    // Блокируем кнопку, если время не выбрано
+    // Блокируем кнопку, если:
+    // 1. Нет инфо о комнате
+    // 2. Статус не свободен
+    // 3. Идет загрузка
+    // 4. Не выбрано время
+    // 5. Не введена цель бронирования (пустая строка)
     const isBookDisabled = !roomInfo ||
         roomInfo.status !== 'свободна' ||
         loading ||
-        !filters.time;
+        !filters.time ||
+        !bookingPurpose.trim();
 
     return (
         <>
@@ -93,12 +104,8 @@ const RoomModal = ({ roomInfo, isOpen, onClose, onBook, loading, error }) => {
                                     )}
 
                                     {/* --- Блок выбора времени --- */}
-                                    <div className="detail-row time-selection-section" style={{
-                                        marginTop: '15px',
-                                        borderTop: '1px solid #eee',
-                                        paddingTop: '15px'
-                                    }}>
-                                        <span className="label">Время бронирования:</span>
+                                    <div className="detail-row time-selection-section" style={{ marginTop: '15px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
+                                        <span className="label">Время бронирования <span style={{color:'red'}}>*</span>:</span>
                                         <div className="value" style={{display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap'}}>
                                             {filters.time ? (
                                                 <span style={{fontWeight: 'bold', color: '#0056b3', fontSize: '1.1rem'}}>
@@ -119,14 +126,35 @@ const RoomModal = ({ roomInfo, isOpen, onClose, onBook, loading, error }) => {
                                                     background: '#f8f9fa',
                                                     border: '1px solid #dee2e6',
                                                     borderRadius: '4px',
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s'
+                                                    cursor: 'pointer'
                                                 }}
                                             >
                                                 {filters.time ? 'Изменить' : 'Выбрать время'}
                                             </button>
                                         </div>
                                     </div>
+
+                                    {/* --- Блок ввода цели бронирования --- */}
+                                    <div className="detail-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '5px', marginTop: '10px' }}>
+                                        <label className="label" style={{width: '100%'}}>Цель бронирования <span style={{color:'red'}}>*</span>:</label>
+                                        <textarea
+                                            className="booking-purpose-input"
+                                            value={bookingPurpose}
+                                            onChange={(e) => setBookingPurpose(e.target.value)}
+                                            placeholder="Например: Лекция по матанализу, мероприятие Студсовета..."
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px',
+                                                border: '1px solid #ddd',
+                                                borderRadius: '4px',
+                                                minHeight: '60px',
+                                                fontFamily: 'inherit',
+                                                resize: 'vertical',
+                                                boxSizing: 'border-box'
+                                            }}
+                                        />
+                                    </div>
+
                                 </div>
 
                                 {hasPanorama && (
@@ -142,13 +170,12 @@ const RoomModal = ({ roomInfo, isOpen, onClose, onBook, loading, error }) => {
                                 )}
 
                                 <div className="modal-actions">
-                                    {/* ID передается в функцию бронирования, а время берется из контекста внутри MapPage */}
                                     <button
                                         className="btn btn-primary"
-                                        onClick={() => onBook(roomInfo.id)}
+                                        onClick={handleBookClick}
                                         disabled={isBookDisabled}
-                                        title={!filters.time ? "Сначала выберите время" : ""}
-                                        style={!filters.time ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
+                                        title={isBookDisabled ? "Заполните время и цель бронирования" : ""}
+                                        style={isBookDisabled ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
                                     >
                                         {loading ? 'Бронирование...' : 'Забронировать'}
                                     </button>
@@ -166,7 +193,7 @@ const RoomModal = ({ roomInfo, isOpen, onClose, onBook, loading, error }) => {
                 </div>
             </div>
 
-            {/* Модалка с панорамой */}
+            {/* Модалки */}
             {showPanorama && hasPanorama && (
                 <CylindricalPanorama
                     imageUrl={roomInfo.panorama}
@@ -174,7 +201,6 @@ const RoomModal = ({ roomInfo, isOpen, onClose, onBook, loading, error }) => {
                 />
             )}
 
-            {/* Модалка выбора времени */}
             {showTimePicker && (
                 <TimeRangeModal
                     onClose={() => setShowTimePicker(false)}
