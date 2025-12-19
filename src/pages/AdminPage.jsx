@@ -419,11 +419,11 @@ const AdminPage = () => {
                         background: 'white', width: '90%', maxWidth: '500px', borderRadius: '8px', padding: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
                     }}>
                         <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                            <h3 style={{ margin: 0 }}>Отклонение заявки #{rejectBookingId}</h3>
+                            <h3 style={{color: "black", margin: 0 }}>Отклонение заявки #{rejectBookingId}</h3>
                             <button className="close-btn" onClick={() => setShowRejectModal(false)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>×</button>
                         </div>
                         <div className="modal-content">
-                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Причина отклонения:</label>
+                            <label style={{ color:"black", display: 'block', marginBottom: '8px', fontWeight: '500' }}>Причина отклонения:</label>
                             <textarea
                                 value={rejectReason}
                                 onChange={(e) => setRejectReason(e.target.value)}
@@ -433,7 +433,7 @@ const AdminPage = () => {
                             />
                         </div>
                         <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
-                            <button onClick={() => setShowRejectModal(false)} style={{ padding: '8px 16px', borderRadius: '4px', border: '1px solid #ddd', background: 'white', cursor: 'pointer' }}>Отмена</button>
+                            <button onClick={() => setShowRejectModal(false)} style={{color: "black", padding: '8px 16px', borderRadius: '4px', border: '1px solid #ddd', background: 'white', cursor: 'pointer' }}>Отмена</button>
                             <button onClick={confirmReject} style={{ padding: '8px 16px', borderRadius: '4px', border: 'none', background: '#dc3545', color: 'white', cursor: 'pointer' }}>Отклонить</button>
                         </div>
                     </div>
