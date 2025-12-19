@@ -23,7 +23,7 @@
     margin: 0 0 20px;
     font-size: 1.5rem;
     font-weight: bold;
-    color: var(--accent-primary);
+    color: var(--accent-secondary);
 }
 
 .login-form {
@@ -38,12 +38,11 @@
     border-radius: 4px;
     font-size: 1rem;
     outline: none;
-    background: var(--body-background-color);
     color: var(--text-inverted);
 }
 
 .login-input:focus {
-    border-color: #007bff;
+    border-color:  var(--accent-secondary-dark);
     box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
@@ -51,7 +50,7 @@
     padding: 12px;
     border: none;
     border-radius: 4px;
-    background: #0056b3;
+    background: var(--accent-secondary);
     color: white;
     font-size: 1rem;
     cursor: pointer;
@@ -59,7 +58,7 @@
 }
 
 .login-button:hover {
-    background: #004494;
+    background: var(--accent-secondary-dark);
 }
 
 .login-footer {
@@ -67,7 +66,7 @@
 }
 
 .forgot-password {
-    color: #007bff;
+    color: var(--accent-secondary);
     text-decoration: none;
     font-size: 0.9rem;
 }
