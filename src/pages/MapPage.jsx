@@ -62,17 +62,11 @@ const MapPage = () => {
             return 'computer';
         }
 
-        const otherKeywords = [
-            'лаборатор', 'спорт', 'читальн', 'библиотек', 'деканат',
-            'кафедра', 'преподавател', 'архив', 'сервер', 'склад',
-            'туалет', 'буфет', 'гардероб'
-        ];
-
-        if (otherKeywords.some(keyword => text.includes(keyword))) {
-            return 'other';
+        if (text.includes('лекц')) {
+            return 'lecture';
         }
 
-        return 'lecture';
+        return 'other';
     };
 
     const getRoomTypeLabel = (type) => {
@@ -96,20 +90,16 @@ const MapPage = () => {
     };
 
     // --- ПАРСИНГ SQL ДАТЫ ---
-    // Преобразует строку "2025-12-17 01:38:31.951231" в Date объект
-    // Гарантированно используя локальное время (как и фильтры пользователя)
     const parseSQLDate = (sqlDateStr) => {
-        if (!sqlDateStr) return new Date(0); // Возвращаем старую дату при ошибке
+        if (!sqlDateStr) return new Date(0);
 
         try {
-            // Разделяем дату и время (игнорируем миллисекунды для простоты сравнения)
             const [datePart, timePartFull] = sqlDateStr.split(' ');
-            if (!datePart || !timePartFull) return new Date(sqlDateStr); // Fallback на стандартный парсер
+            if (!datePart || !timePartFull) return new Date(sqlDateStr);
 
             const [year, month, day] = datePart.split('-').map(Number);
             const [hour, minute, second] = timePartFull.split('.')[0].split(':').map(Number);
 
-            // Создаем дату в локальном часовом поясе пользователя
             return new Date(year, month - 1, day, hour, minute, second);
         } catch (e) {
             console.error("Ошибка ручного парсинга даты:", sqlDateStr, e);
@@ -177,7 +167,6 @@ const MapPage = () => {
             const [startH, startM] = startStr.split(':').map(Number);
             const [endH, endM] = endStr.split(':').map(Number);
             const [year, month, day] = dateStr.split('-').map(Number);
-            // Создаем объекты Date в локальном времени
             const filterStart = new Date(year, month - 1, day, startH, startM, 0);
             const filterEnd = new Date(year, month - 1, day, endH, endM, 0);
             return { start: filterStart, end: filterEnd };
@@ -209,28 +198,17 @@ const MapPage = () => {
             const range = getFilterDateRange(currentFilters.date, currentFilters.time);
 
             if (range) {
-                // Проверяем, есть ли пересечение интервалов
                 const isOccupied = activeBookings.some(booking => {
-                    // 1. Сравниваем ID. Приводим к строке для безопасности (API отдает int, roomData.dbId может быть int/string)
                     if (String(booking.classroom_id) !== String(roomData.dbId)) return false;
-
-                    // 2. Пропускаем только ОТКЛОНЕННЫЕ заявки (false).
-                    // status: true (одобрено) - ЗАНЯТО
-                    // status: null (на рассмотрении) - ЗАНЯТО (блокируем слот пока рассматриваем)
                     if (booking.status === false) return false;
 
-                    // 3. Парсим даты из БД специальной функцией
                     const bookingStart = parseSQLDate(booking.date_start);
                     const bookingEnd = parseSQLDate(booking.date_end);
 
-                    // 4. Логика пересечения интервалов:
-                    // (StartA < EndB) && (EndA > StartB)
                     const isIntersecting = (bookingStart < range.end) && (bookingEnd > range.start);
-
                     return isIntersecting;
                 });
 
-                // Если аудитория занята (есть пересечение), фильтруем её (возвращаем false)
                 if (isOccupied) return false;
             }
         }
@@ -382,7 +360,6 @@ const MapPage = () => {
             const displayDate = startDate.toLocaleDateString();
             alert(`Заявка успешно создана!\nАудитория: ${roomInfo.name}\nДата: ${displayDate}\nВремя: ${filters.time}`);
 
-            // Обновляем список бронирований
             const response = await privateApi.post('/database/get/Booking', {});
             const data = Array.isArray(response.data) ? response.data : (response.data?.results || []);
             setBookings(data);
@@ -447,6 +424,7 @@ const MapPage = () => {
                     <div className="quick-filter-buttons">
                         <button className={`quick-filter-btn ${filters.roomType === 'lecture' ? 'active' : ''}`} onClick={() => updateFilter('roomType', filters.roomType === 'lecture' ? 'all' : 'lecture')}>Лекционные</button>
                         <button className={`quick-filter-btn ${filters.roomType === 'computer' ? 'active' : ''}`} onClick={() => updateFilter('roomType', filters.roomType === 'computer' ? 'all' : 'computer')}>Компьютерные</button>
+                        <button className={`quick-filter-btn ${filters.roomType === 'other' ? 'active' : ''}`} onClick={() => updateFilter('roomType', filters.roomType === 'other' ? 'all' : 'other')}>Другие</button>
                         <button className={`quick-filter-btn ${filters.minCapacity === 30 ? 'active' : ''}`} onClick={() => updateFilter('minCapacity', filters.minCapacity === 30 ? 0 : 30)}>От 30 мест</button>
                     </div>
                 </div>
