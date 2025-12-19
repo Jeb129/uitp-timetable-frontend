@@ -110,6 +110,10 @@
     gap: 10px;
 }
 
+.notification-text {
+    color: white;
+}
+
 .notification-item.read {
     opacity: 0.6;
 }

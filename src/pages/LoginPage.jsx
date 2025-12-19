@@ -36,7 +36,7 @@ const LoginPage = () => {
     return (
         <div className="login-page-centered">
             <div className="login-form-container">
-                <h1>Зайдите на СДО КГУ</h1>
+                <h1>Войти в аккаунт</h1>
 
                 {error && <div className="error-message" style={{color: 'red', marginBottom: '10px', textAlign: 'center'}}>{error}</div>}
 
@@ -61,7 +61,6 @@ const LoginPage = () => {
                 </form>
 
                 <div className="login-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '15px' }}>
-                    <Link to="#" className="forgot-password">Забыли пароль?</Link>
                     <Link to="/register" className="forgot-password">Регистрация</Link>
                 </div>
             </div>
