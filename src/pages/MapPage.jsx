@@ -62,11 +62,17 @@ const MapPage = () => {
             return 'computer';
         }
 
-        if (text.includes('лекц')) {
-            return 'lecture';
+        const otherKeywords = [
+            'лаборатор', 'спорт', 'читальн', 'библиотек', 'деканат',
+            'кафедра', 'преподавател', 'архив', 'сервер', 'склад',
+            'туалет', 'буфет', 'гардероб'
+        ];
+
+        if (otherKeywords.some(keyword => text.includes(keyword))) {
+            return 'other';
         }
 
-        return 'other';
+        return 'lecture';
     };
 
     const getRoomTypeLabel = (type) => {
@@ -89,20 +95,28 @@ const MapPage = () => {
         return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
     };
 
-    // --- ПАРСИНГ SQL ДАТЫ ---
+    // --- ПАРСИНГ SQL ДАТЫ (КРИТИЧНО ВАЖНО) ---
+    // Превращает строку "2025-12-17 01:38:31.951231" в Date объект
+    // Игнорируя часовой пояс (считаем, что в БД время локальное, и у пользователя локальное)
     const parseSQLDate = (sqlDateStr) => {
         if (!sqlDateStr) return new Date(0);
 
         try {
+            // Разделяем дату и время
+            // Пример: "2025-12-17 01:38:31.951231" -> ["2025-12-17", "01:38:31.951231"]
             const [datePart, timePartFull] = sqlDateStr.split(' ');
             if (!datePart || !timePartFull) return new Date(sqlDateStr);
 
             const [year, month, day] = datePart.split('-').map(Number);
+
+            // Убираем миллисекунды и делим время
             const [hour, minute, second] = timePartFull.split('.')[0].split(':').map(Number);
 
+            // Создаем дату: месяц в JS начинается с 0
             return new Date(year, month - 1, day, hour, minute, second);
         } catch (e) {
             console.error("Ошибка ручного парсинга даты:", sqlDateStr, e);
+            // Fallback на стандартный парсер
             return new Date(sqlDateStr);
         }
     };
@@ -160,6 +174,7 @@ const MapPage = () => {
         fetchBookings();
     }, []);
 
+    // Формируем интервал поиска (Start, End) на основе даты и выбранного времени
     const getFilterDateRange = (dateStr, timeRangeStr) => {
         if (!dateStr || !timeRangeStr) return null;
         try {
@@ -167,8 +182,12 @@ const MapPage = () => {
             const [startH, startM] = startStr.split(':').map(Number);
             const [endH, endM] = endStr.split(':').map(Number);
             const [year, month, day] = dateStr.split('-').map(Number);
+
+            // Дата начала интервала поиска
             const filterStart = new Date(year, month - 1, day, startH, startM, 0);
+            // Дата конца интервала поиска
             const filterEnd = new Date(year, month - 1, day, endH, endM, 0);
+
             return { start: filterStart, end: filterEnd };
         } catch (e) {
             console.error("Ошибка парсинга даты/времени фильтра", e);
@@ -176,42 +195,53 @@ const MapPage = () => {
         }
     };
 
-    // --- ГЛАВНАЯ ФУНКЦИЯ ФИЛЬТРАЦИИ ---
+    // --- ГЛАВНАЯ ЛОГИКА ФИЛЬТРАЦИИ ---
     const checkRoomFilters = (roomData, currentFilters, activeBookings) => {
         if (!roomData) return false;
 
-        // Фильтр по этажу
+        // 1. Фильтры характеристик (этаж, места, тип)
         if (currentFilters.floor && String(currentFilters.floor) !== '' && String(roomData.floor) !== String(currentFilters.floor)) return false;
 
-        // Фильтр по вместимости
         const filterCap = parseInt(currentFilters.minCapacity, 10);
         const roomCap = parseInt(roomData.capacity, 10);
         if (!isNaN(filterCap) && filterCap > 0 && roomCap < filterCap) return false;
 
-        // Фильтр по типу
         if (currentFilters.roomType && currentFilters.roomType !== 'all') {
             if (roomData.type !== currentFilters.roomType) return false;
         }
 
-        // --- Фильтр по времени (Занятость) ---
+        // 2. Фильтр по времени (Проверка занятости)
         if (currentFilters.time && currentFilters.date) {
-            const range = getFilterDateRange(currentFilters.date, currentFilters.time);
+            const searchRange = getFilterDateRange(currentFilters.date, currentFilters.time);
 
-            if (range) {
+            if (searchRange) {
+                // Ищем, есть ли хоть одна бронь, которая пересекается с выбранным временем
                 const isOccupied = activeBookings.some(booking => {
+                    // А. Проверяем ID аудитории
                     if (String(booking.classroom_id) !== String(roomData.dbId)) return false;
+
+                    // Б. Проверяем статус.
+                    // Если статус false (отклонено) - бронь не считается, аудитория свободна.
+                    // Если статус true (подтверждено) или null (на рассмотрении) - бронь считается.
                     if (booking.status === false) return false;
 
+                    // В. Парсим время бронирования из базы
                     const bookingStart = parseSQLDate(booking.date_start);
                     const bookingEnd = parseSQLDate(booking.date_end);
 
-                    const isIntersecting = (bookingStart < range.end) && (bookingEnd > range.start);
+                    // Г. Логика пересечения интервалов:
+                    // Если (Начало брони < Конец поиска) И (Конец брони > Начало поиска) -> Пересечение есть
+                    const isIntersecting = (bookingStart < searchRange.end) && (bookingEnd > searchRange.start);
+
                     return isIntersecting;
                 });
 
+                // Если найдено пересечение, аудитория занята -> скрываем её
                 if (isOccupied) return false;
             }
         }
+
+        // Если все проверки пройдены, аудитория подходит
         return true;
     };
 
