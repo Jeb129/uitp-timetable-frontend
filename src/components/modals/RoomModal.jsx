@@ -1,17 +1,65 @@
 // src/components/modals/RoomModal.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import CylindricalPanorama from '../CylindricalPanorama';
 import TimeRangeModal from './TimeRangeModal';
 import { useFilters } from '../../contexts/FilterContext';
+import { publicApi } from '../../utils/api/axios';
 import './RoomModal.css';
 
 const RoomModal = ({ roomInfo, isOpen, onClose, onBook, loading, error }) => {
     const [showPanorama, setShowPanorama] = useState(false);
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [bookingPurpose, setBookingPurpose] = useState('');
+    const [isOccupied, setIsOccupied] = useState(false);
+    const [checkingOccupied, setCheckingOccupied] = useState(false);
 
     const { filters, updateFilter } = useFilters();
     const today = new Date().toISOString().split('T')[0];
+
+    // Проверка занятости аудитории при изменении даты/времени
+    useEffect(() => {
+        const checkIfOccupied = async () => {
+            if (!roomInfo?.id || !filters.date || !filters.time) {
+                setIsOccupied(false);
+                return;
+            }
+
+            setCheckingOccupied(true);
+            try {
+                // Получаем расписание аудитории
+                const response = await publicApi.get(`/classroom/schedule/${roomInfo.id}`);
+                const schedule = response.data;
+
+                // Парсим выбранное время
+                const [startStr, endStr] = filters.time.split(' - ');
+                const [startH, startM] = startStr.split(':').map(Number);
+                const [endH, endM] = endStr.split(':').map(Number);
+                const [year, month, day] = filters.date.split('-').map(Number);
+
+                const selectedStart = new Date(year, month - 1, day, startH, startM, 0);
+                const selectedEnd = new Date(year, month - 1, day, endH, endM, 0);
+
+                // Проверяем пересечение с событиями в расписании
+                const occupied = schedule.some(event => {
+                    const eventStart = new Date(event.start);
+                    const eventEnd = new Date(event.end);
+
+                    return (eventStart < selectedEnd) && (eventEnd > selectedStart);
+                });
+
+                setIsOccupied(occupied);
+            } catch (err) {
+                console.error("Ошибка проверки занятости аудитории:", err);
+                setIsOccupied(false);
+            } finally {
+                setCheckingOccupied(false);
+            }
+        };
+
+        if (isOpen && roomInfo) {
+            checkIfOccupied();
+        }
+    }, [filters.date, filters.time, roomInfo, isOpen]);
 
     if (!isOpen) return null;
 
@@ -28,6 +76,10 @@ const RoomModal = ({ roomInfo, isOpen, onClose, onBook, loading, error }) => {
     };
 
     const handleBookClick = () => {
+        if (isOccupied) {
+            alert('Аудитория занята в выбранное время. Пожалуйста, выберите другое время.');
+            return;
+        }
         onBook(bookingPurpose);
     };
 
@@ -35,11 +87,21 @@ const RoomModal = ({ roomInfo, isOpen, onClose, onBook, loading, error }) => {
 
     // Проверка валидности
     const isBookDisabled = !roomInfo ||
-        roomInfo.status !== 'свободна' ||
         loading ||
+        checkingOccupied ||
         !filters.time ||
-        !filters.date || // Обязательно должна быть дата
-        !bookingPurpose.trim();
+        !filters.date ||
+        !bookingPurpose.trim() ||
+        isOccupied; // Добавлена проверка на занятость
+
+    // Определяем сообщение для подсказки
+    const getDisabledMessage = () => {
+        if (!filters.date) return "Выберите дату бронирования";
+        if (!filters.time) return "Выберите время бронирования";
+        if (!bookingPurpose.trim()) return "Укажите цель бронирования";
+        if (isOccupied) return "Аудитория занята в выбранное время";
+        return "";
+    };
 
     return (
         <>
@@ -65,8 +127,8 @@ const RoomModal = ({ roomInfo, isOpen, onClose, onBook, loading, error }) => {
                             <>
                                 <div className="room-header">
                                     <h3 className="room-title">{roomInfo.name || `Аудитория ${roomInfo.id}`}</h3>
-                                    <span className={`status-badge ${roomInfo.status || 'неизвестно'}`}>
-                                        {roomInfo.status || 'неизвестно'}
+                                    <span className={`status-badge ${isOccupied ? 'occupied' : 'free'}`}>
+                                        {isOccupied ? 'занята' : 'свободна'}
                                     </span>
                                 </div>
 
@@ -142,6 +204,25 @@ const RoomModal = ({ roomInfo, isOpen, onClose, onBook, loading, error }) => {
                                         </div>
                                     </div>
 
+                                    {/* Индикатор занятости */}
+                                    {filters.time && filters.date && (
+                                        <div className="detail-row" style={{ marginTop: '5px' }}>
+                                            {checkingOccupied ? (
+                                                <span style={{ color: '#666', fontStyle: 'italic' }}>
+                                                    Проверка доступности...
+                                                </span>
+                                            ) : isOccupied ? (
+                                                <span style={{ color: '#dc3545', fontWeight: 'bold' }}>
+                                                    ⚠️ Аудитория занята в выбранное время
+                                                </span>
+                                            ) : (
+                                                <span style={{ color: '#28a745', fontWeight: 'bold' }}>
+                                                    ✓ Аудитория свободна в выбранное время
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+
                                     {/* --- Блок ввода цели --- */}
                                     <div className="detail-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '5px', marginTop: '10px' }}>
                                         <label className="label" style={{width: '100%'}}>Цель бронирования <span style={{color:'red'}}>*</span>:</label>
@@ -151,7 +232,7 @@ const RoomModal = ({ roomInfo, isOpen, onClose, onBook, loading, error }) => {
                                             onChange={(e) => setBookingPurpose(e.target.value)}
                                             placeholder="Например: Лекция по матанализу..."
                                             style={{
-                                                color: "#333", // Исправил на черный для читаемости
+                                                color: "#333",
                                                 width: '100%',
                                                 padding: '10px',
                                                 border: '1px solid #ddd',
@@ -178,10 +259,10 @@ const RoomModal = ({ roomInfo, isOpen, onClose, onBook, loading, error }) => {
                                         className="btn btn-primary"
                                         onClick={handleBookClick}
                                         disabled={isBookDisabled}
-                                        title={isBookDisabled ? "Заполните дату, время и цель бронирования" : ""}
+                                        title={getDisabledMessage()}
                                         style={isBookDisabled ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
                                     >
-                                        {loading ? 'Бронирование...' : 'Забронировать'}
+                                        {loading ? 'Бронирование...' : checkingOccupied ? 'Проверка...' : 'Забронировать'}
                                     </button>
                                     <button className="btn btn-secondary" onClick={onClose}>Закрыть</button>
                                 </div>
