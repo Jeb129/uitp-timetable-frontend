@@ -1,10 +1,9 @@
 // src/pages/MapPage.jsx
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import InteractiveSVG from '../components/InteractiveSVG';
 import ThreeDViewer from "../components/ThreeDViewer.jsx";
 import RoomModal from '../components/modals/RoomModal';
-// Импортируем модалку оплаты
 import PaymentModal from '../components/modals/PaymentModal';
 import { useFilters } from '../contexts/FilterContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -35,9 +34,9 @@ const MapPage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // Данные всех аудиторий и бронирований
+    // Данные всех аудиторий и расписаний для фильтрации
     const [allRoomsData, setAllRoomsData] = useState({});
-    const [bookings, setBookings] = useState([]);
+    const [roomsSchedule, setRoomsSchedule] = useState({}); // { roomId: [events] }
 
     const { filters, updateFilter, updateStats } = useFilters();
     const [currentFloor, setCurrentFloor] = useState(Number(filters.floor) || 1);
@@ -47,7 +46,7 @@ const MapPage = () => {
         '2.5d': { 1: Floor1_2D, 2: Floor2_2D, 3: Floor3_2D, 4: Floor4_2D }
     };
 
-    // Хелперы (оставляем без изменений)
+    // Хелперы
     const getSvgIdFromDbNumber = (dbNumber) => {
         if (!dbNumber) return null;
         const match = dbNumber.match(/(\d+)/);
@@ -92,18 +91,14 @@ const MapPage = () => {
         return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
     };
 
-    // --- ПАРСИНГ SQL ДАТЫ ---
-    const parseSQLDate = (sqlDateStr) => {
-        if (!sqlDateStr) return new Date(0);
+    // --- ПАРСИНГ ISO ДАТЫ ---
+    const parseISODate = (isoDateStr) => {
+        if (!isoDateStr) return new Date(0);
         try {
-            const [datePart, timePartFull] = sqlDateStr.split(' ');
-            if (!datePart || !timePartFull) return new Date(sqlDateStr);
-            const [year, month, day] = datePart.split('-').map(Number);
-            const [hour, minute, second] = timePartFull.split('.')[0].split(':').map(Number);
-            return new Date(year, month - 1, day, hour, minute, second);
+            return new Date(isoDateStr);
         } catch (e) {
-            console.error("Ошибка ручного парсинга даты:", sqlDateStr, e);
-            return new Date(sqlDateStr);
+            console.error("Ошибка парсинга ISO даты:", isoDateStr, e);
+            return new Date(0);
         }
     };
 
@@ -146,29 +141,52 @@ const MapPage = () => {
         fetchAllRooms();
     }, []);
 
-    // 2. Загрузка бронирований
+    // 2. Загрузка расписания для всех аудиторий при изменении даты/времени
     useEffect(() => {
-        const fetchBookings = async () => {
-            try {
-                const response = await privateApi.post('/database/get/Booking', {});
-                const data = Array.isArray(response.data) ? response.data : (response.data?.results || []);
-                setBookings(data);
-            } catch (err) {
-                console.error("Ошибка загрузки бронирований:", err);
+        const fetchAllSchedules = async () => {
+            if (!filters.date || !filters.time) {
+                setRoomsSchedule({});
+                return;
             }
-        };
-        fetchBookings();
-    }, []);
 
-    const getFilterDateRange = (dateStr, timeRangeStr) => {
-        if (!dateStr || !timeRangeStr) return null;
+            const roomsList = Object.values(allRoomsData);
+            if (roomsList.length === 0) return;
+
+            const schedulePromises = roomsList.map(async (room) => {
+                try {
+                    const response = await publicApi.get(`/classroom/schedule/${room.dbId}`);
+                    return { roomId: room.dbId, events: response.data };
+                } catch (err) {
+                    console.error(`Ошибка загрузки расписания для аудитории ${room.number}:`, err);
+                    return { roomId: room.dbId, events: [] };
+                }
+            });
+
+            const results = await Promise.all(schedulePromises);
+            const scheduleMap = {};
+            results.forEach(result => {
+                scheduleMap[result.roomId] = result.events;
+            });
+            setRoomsSchedule(scheduleMap);
+        };
+
+        if (Object.keys(allRoomsData).length > 0) {
+            fetchAllSchedules();
+        }
+    }, [filters.date, filters.time, allRoomsData]);
+
+    const getFilterDateTimeRange = () => {
+        if (!filters.date || !filters.time) return null;
+
         try {
-            const [startStr, endStr] = timeRangeStr.split(' - ');
+            const [startStr, endStr] = filters.time.split(' - ');
             const [startH, startM] = startStr.split(':').map(Number);
             const [endH, endM] = endStr.split(':').map(Number);
-            const [year, month, day] = dateStr.split('-').map(Number);
+            const [year, month, day] = filters.date.split('-').map(Number);
+
             const filterStart = new Date(year, month - 1, day, startH, startM, 0);
             const filterEnd = new Date(year, month - 1, day, endH, endM, 0);
+
             return { start: filterStart, end: filterEnd };
         } catch (e) {
             console.error("Ошибка парсинга даты/времени фильтра", e);
@@ -176,45 +194,58 @@ const MapPage = () => {
         }
     };
 
-    // --- ГЛАВНАЯ ЛОГИКА ФИЛЬТРАЦИИ ---
-    const checkRoomFilters = (roomData, currentFilters, activeBookings) => {
-        if (!roomData) return false;
-        if (currentFilters.floor && String(currentFilters.floor) !== '' && String(roomData.floor) !== String(currentFilters.floor)) return false;
+    // Проверка, занята ли аудитория в выбранное время (учитывает и пары, и бронирования)
+    const isRoomOccupied = (roomData, filterRange) => {
+        if (!filterRange || !roomsSchedule[roomData.dbId]) return false;
 
+        return roomsSchedule[roomData.dbId].some(event => {
+            const eventStart = parseISODate(event.start);
+            const eventEnd = parseISODate(event.end);
+
+            // Проверяем пересечение интервалов
+            return (eventStart < filterRange.end) && (eventEnd > filterRange.start);
+        });
+    };
+
+    // --- ГЛАВНАЯ ЛОГИКА ФИЛЬТРАЦИИ ---
+    const checkRoomFilters = useCallback((roomData, currentFilters) => {
+        if (!roomData) return false;
+
+        // Фильтр по этажу
+        if (currentFilters.floor && String(currentFilters.floor) !== '' &&
+            String(roomData.floor) !== String(currentFilters.floor)) return false;
+
+        // Фильтр по вместимости
         const filterCap = parseInt(currentFilters.minCapacity, 10);
         const roomCap = parseInt(roomData.capacity, 10);
         if (!isNaN(filterCap) && filterCap > 0 && roomCap < filterCap) return false;
 
+        // Фильтр по типу аудитории
         if (currentFilters.roomType && currentFilters.roomType !== 'all') {
             if (roomData.type !== currentFilters.roomType) return false;
         }
 
+        // Фильтр по времени (используем расписание из /schedule)
         if (currentFilters.time && currentFilters.date) {
-            const searchRange = getFilterDateRange(currentFilters.date, currentFilters.time);
-            if (searchRange) {
-                const isOccupied = activeBookings.some(booking => {
-                    if (String(booking.classroom_id) !== String(roomData.dbId)) return false;
-                    if (booking.status === false) return false;
-                    const bookingStart = parseSQLDate(booking.date_start);
-                    const bookingEnd = parseSQLDate(booking.date_end);
-                    const isIntersecting = (bookingStart < searchRange.end) && (bookingEnd > searchRange.start);
-                    return isIntersecting;
-                });
-                if (isOccupied) return false;
+            const filterRange = getFilterDateTimeRange();
+            if (filterRange) {
+                // Если аудитория занята в выбранное время - не показываем её
+                if (isRoomOccupied(roomData, filterRange)) return false;
             }
         }
+
         return true;
-    };
+    }, [roomsSchedule]);
 
     const getFilteredRooms = useMemo(() => {
         const filteredIds = [];
         Object.keys(allRoomsData).forEach(svgId => {
-            if (checkRoomFilters(allRoomsData[svgId], filters, bookings)) {
+            if (checkRoomFilters(allRoomsData[svgId], filters)) {
                 filteredIds.push(svgId);
             }
         });
         return filteredIds;
-    }, [filters, allRoomsData, bookings]);
+    }, [filters, allRoomsData, checkRoomFilters]);
 
     useEffect(() => {
         const roomsArray = Object.values(allRoomsData);
@@ -290,7 +321,7 @@ const MapPage = () => {
         }
     };
 
-    // --- БРОНИРОВАНИЕ (ОБНОВЛЕННАЯ ЛОГИКА) ---
+    // --- БРОНИРОВАНИЕ ---
     const handleBookRoom = async (bookingPurpose) => {
         if (!roomInfo || !roomInfo.id) {
             alert("Ошибка: Не выбрана аудитория");
@@ -332,26 +363,19 @@ const MapPage = () => {
             };
 
             const response = await privateApi.post('/booking/create', payload);
-            const responseData = response.data; // Получаем ответ { message, booking_id, total_cost }
-
-            // Обновляем список бронирований
-            const bookingsRes = await privateApi.post('/database/get/Booking', {});
-            const bookingsList = Array.isArray(bookingsRes.data) ? bookingsRes.data : (bookingsRes.data?.results || []);
-            setBookings(bookingsList);
+            const responseData = response.data;
 
             // Закрываем окно бронирования аудитории
             handleCloseModal();
 
-            // --- ПРОВЕРКА НА ОПЛАТУ (НОВАЯ ЛОГИКА) ---
+            // --- ПРОВЕРКА НА ОПЛАТУ ---
             const userRole = user.role || 'guest';
             const cost = parseFloat(responseData.total_cost || 0);
 
             if (userRole === 'user' && cost > 0) {
-                // Если внешний пользователь и цена > 0 -> Открываем окно оплаты
                 setPaymentAmount(cost);
                 setIsPaymentModalOpen(true);
             } else {
-                // Иначе стандартное уведомление
                 const displayDate = startDate.toLocaleDateString();
                 alert(`Заявка успешно создана!\nАудитория: ${roomInfo.name}\nДата: ${displayDate}\nВремя: ${filters.time}`);
             }
@@ -377,11 +401,9 @@ const MapPage = () => {
         setError(null);
     };
 
-    // Закрытие окна оплаты
     const handleClosePaymentModal = () => {
         setIsPaymentModalOpen(false);
         setPaymentAmount(0);
-        // Можно показать алерт после оплаты, если нужно
         alert('Спасибо! Бронирование завершено.');
     };
 
@@ -429,7 +451,9 @@ const MapPage = () => {
 
                 <div className="filter-stats">
                     <div className="stats-badge">
-                        <span className="stats-text">Показано: <strong>{getFilteredRooms.length}</strong></span>
+                        <span className="stats-text">
+                            Показано: <strong>{getFilteredRooms.length}</strong>
+                        </span>
                     </div>
                     {(filters.floor || filters.minCapacity > 0 || filters.roomType !== 'all' || filters.status !== 'all' || filters.time) && (
                         <button className="reset-filters-btn" onClick={handleResetFilters}>Сбросить</button>
@@ -476,7 +500,6 @@ const MapPage = () => {
                 error={error}
             />
 
-            {/* Модальное окно оплаты */}
             <PaymentModal
                 isOpen={isPaymentModalOpen}
                 onClose={handleClosePaymentModal}

@@ -298,7 +298,54 @@ const AdminPage = () => {
                     {/* STATS */}
                     {activeTab === 'stats' && (
                         <div className="tab-panel">
-                            <AdminCharts statistics={mockChartData} bookings={bookings} users={users} revenueData={mockChartData.revenueData}/>
+                            <div className="table-header">
+                                <h3>Общая статистика</h3>
+                                <div className="table-actions">
+                                    <button className="action-btn secondary" onClick={loadData}>Обновить</button>
+                                </div>
+                            </div>
+
+                            {/* Карточки с РЕАЛЬНЫМИ данными */}
+                            <div className="stats-container">
+                                <div className="stats-grid-three">
+                                    <div className="stat-card">
+                                        <h4>Пользователи</h4>
+                                        <div className="stat-number">{statistics.totalUsers}</div>
+                                        <div className="stat-label">Всего пользователей</div>
+                                        <div className="stat-details">
+                                            <span>Подтверждено: {statistics.activeUsers}</span>
+                                            <span>Не подтверждено: {statistics.pendingUsers}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="stat-card">
+                                        <h4>Бронирования</h4>
+                                        <div className="stat-number">{statistics.totalBookings}</div>
+                                        <div className="stat-label">Всего бронирований</div>
+                                        <div className="stat-details">
+                                            <span>Одобрено: {statistics.approvedBookings}</span>
+                                            <span>На модерации: {statistics.pendingModeration}</span>
+                                            <span>Выручка: {statistics.totalRevenue} ₽</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="stat-card">
+                                        <h4>Аудитории</h4>
+                                        <div className="stat-number">{statistics.roomsAvailable}</div>
+                                        <div className="stat-label">Всего аудиторий</div>
+                                        <div className="stat-details">
+                                            <span>Топ по выручке: {statistics.popularRoom}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <AdminCharts
+                                statistics={mockChartData}
+                                bookings={bookings}
+                                users={users}
+                                revenueData={mockChartData.revenueData}
+                            />
                         </div>
                     )}
 
@@ -307,7 +354,14 @@ const AdminPage = () => {
                         <div className="tab-panel">
                             <div className="table-container">
                                 <table className="admin-table">
-                                    <thead><tr><th>ID</th><th>Email</th><th>Роль</th><th>Подтверждение КГУ</th></tr></thead>
+                                    <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Email</th>
+                                        <th>Роль</th>
+                                        <th>Подтверждение КГУ</th>
+                                    </tr>
+                                    </thead>
                                     <tbody>
                                     {users.map(user => (
                                         <tr key={user.id}>
@@ -333,7 +387,15 @@ const AdminPage = () => {
                             <div className="table-container">
                                 <table className="admin-table">
                                     <thead>
-                                    <tr><th>ID</th><th>Пользователь</th><th>Аудитория</th><th>Дата</th><th>Время</th><th>Статус</th><th>Действия</th></tr>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Пользователь</th>
+                                        <th>Аудитория</th>
+                                        <th>Дата</th>
+                                        <th>Время</th>
+                                        <th>Статус</th>
+                                        <th>Действия</th>
+                                    </tr>
                                     </thead>
                                     <tbody>
                                     {bookings.map(booking => (
@@ -345,7 +407,9 @@ const AdminPage = () => {
                                             <td className="cell-time">{formatBookingTime(booking)}</td>
                                             <td className="cell-status">{getStatusBadge(booking.status)}</td>
                                             <td className="cell-actions">
-                                                <button className="btn-view" onClick={() => handleViewBooking(booking)}>Просмотр</button>
+                                                <button className="btn-view"
+                                                        onClick={() => handleViewBooking(booking)}>Просмотр
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}
